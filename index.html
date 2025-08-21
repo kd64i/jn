@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>免费图床</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            position: relative;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        /* 动态背景 */
+        #particle-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+        }
+
+        /* 响应式容器 */
+        .container {
+            background-color: rgba(255, 255, 255, 0.15);
+            padding: 20px;
+            border-radius: 16px;
+            backdrop-filter: blur(8px);
+            width: 100%;
+            max-width: 600px;
+            min-width: 320px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+            z-index: 10;
+            animation: containerFadeIn 1.2s ease-out;
+        }
+
+        /* 媒体查询 */
+        @media (min-width: 768px) {
+            .container {
+                padding: 35px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+                border-radius: 12px;
+            }
+        }
+
+        @keyframes containerFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            margin-bottom: 20px;
+            color: #ffffff;
+            font-weight: 500;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            animation: textGlow 2s infinite alternate;
+            transition: all 0.3s ease;
+        }
+
+        @media (min-width: 768px) {
+            h1 {
+                font-size: 28px;
+                margin-bottom: 24px;
+            }
+        }
+
+        @keyframes textGlow {
+            from {
+                text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            }
+            to {
+                text-shadow: 0 0 20px rgba(255, 255, 255, 0.8), 
+                             0 0 30px rgba(255, 255, 255, 0.5),
+                             0 0 40px rgba(255, 255, 255, 0.3);
+            }
+        }
+
+        .upload-area {
+            margin-bottom: 20px;
+        }
+
+        /* 文件输入区域适配 */
+        input[type="file"] {
+            display: block;
+            margin: 0 auto 16px;
+            padding: 12px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 12px;
+            font-size: 16px;
+            color: #ffffff;
+            transition: all 0.3s ease;
+            width: 100%;
+            cursor: pointer;
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 480px) {
+            input[type="file"] {
+                padding: 10px;
+                font-size: 14px;
+            }
+        }
+
+        input[type="file"]:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: scale(1.02);
+        }
+
+        input[type="file"]::file-selector-button {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 14px;
+        }
+
+        @media (max-width: 480px) {
+            input[type="file"]::file-selector-button {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+        }
+
+        input[type="file"]::file-selector-button:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+
+        button {
+            background-color: rgba(102, 187, 106, 0.8);
+            color: #ffffff;
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            font-weight: 500;
+            width: 100%;
+            max-width: 200px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @media (max-width: 480px) {
+            button {
+                padding: 10px 20px;
+                font-size: 15px;
+                max-width: 180px;
+            }
+        }
+
+        button::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 5px;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.3);
+            opacity: 0;
+            border-radius: 100%;
+            transform: scale(1, 1) translate(-50%, -50%);
+            transform-origin: 50% 50%;
+        }
+
+        button:hover {
+            background-color: rgba(76, 175, 80, 0.9);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:focus:not(:active)::after {
+            animation: ripple 0.8s ease-out;
+        }
+
+        @keyframes ripple {
+            0% {
+                transform: scale(0, 0);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(60, 60);
+                opacity: 0;
+            }
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            background-color: rgba(255, 255, 255, 0.15);
+            font-size: 15px;
+            color: #ffffff;
+            min-height: 40px;
+            transition: all 0.3s ease;
+            overflow-wrap: break-word;
+            word-break: break-all;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @media (max-width: 480px) {
+            .result {
+                padding: 12px;
+                font-size: 14px;
+            }
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                height: 0;
+            }
+            to {
+                opacity: 1;
+                height: auto;
+            }
+        }
+        
+        /* 运行时间样式 - 响应式 */
+        .runtime-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: transparent;
+            padding: 6px 0;
+            text-align: center;
+            z-index: 1000;
+        }
+        
+        .runtime-content {
+            display: inline-block;
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 5px 12px;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 13px;
+            margin: 0 auto;
+            max-width: 95%;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @media (max-width: 480px) {
+            .runtime-content {
+                width: 100%;
+                max-width: 100%;
+                border-radius: 0;
+                border-left: none;
+                border-right: none;
+                border-bottom: none;
+                padding: 8px 0;
+            }
+        }
+        
+        @keyframes slideUp {
+            from {
+                transform: translateY(30px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+        
+        .runtime-label {
+            font-size: 13px;
+            font-weight: 500;
+            margin-right: 6px;
+            color: #ffffff;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+            letter-spacing: 0.5px;
+            display: inline-block;
+        }
+
+        @media (max-width: 480px) {
+            .runtime-label {
+                display: block;
+                margin-bottom: 5px;
+                font-size: 12px;
+            }
+        }
+        
+        .runtime-value {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 3px;
+        }
+
+        @media (max-width: 480px) {
+            .runtime-value {
+                gap: 6px;
+            }
+        }
+        
+        .runtime-unit {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 35px;
+        }
+
+        @media (max-width: 480px) {
+            .runtime-unit {
+                min-width: 30px;
+            }
+        }
+        
+        .runtime-number {
+            font-size: 16px;
+            font-weight: bold;
+            color: #ffffff;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            font-family: 'Arial', sans-serif;
+            letter-spacing: 0.5px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @media (max-width: 480px) {
+            .runtime-number {
+                font-size: 14px;
+            }
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                color: #ffffff;
+            }
+            50% {
+                transform: scale(1.05);
+                color: #66bb6a;
+            }
+        }
+        
+        .runtime-text {
+            font-size: 9px;
+            opacity: 0.9;
+            color: #ffffff;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 1px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 动态背景画布 -->
+    <div id="particle-bg"></div>
+
+    <div class="container">
+        <h1>免费图床</h1>
+        <div class="upload-area">
+            <form id="uploadForm">
+                <input type="file" id="fileInput" name="file" accept="image/*" required />
+                <button type="submit">上传文件</button>
+            </form>
+        </div>
+        <div id="result" class="result"></div>
+    </div>
+
+    <!-- 网站运行时间显示 -->
+    <div class="runtime-container">
+        <div class="runtime-content">
+            <span class="runtime-label">网站已持续运行:</span>
+            <div class="runtime-value">
+                <span class="runtime-unit">
+                    <span class="runtime-number" id="runtimeDays">0</span>
+                    <span class="runtime-text">天</span>
+                </span>
+                <span class="runtime-unit">
+                    <span class="runtime-number" id="runtimeHours">00</span>
+                    <span class="runtime-text">小时</span>
+                </span>
+                <span class="runtime-unit">
+                    <span class="runtime-number" id="runtimeMinutes">00</span>
+                    <span class="runtime-text">分钟</span>
+                </span>
+                <span class="runtime-unit">
+                    <span class="runtime-number" id="runtimeSeconds">00</span>
+                    <span class="runtime-text">秒</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 创建粒子背景
+        function createParticleBackground() {
+            const bg = document.getElementById('particle-bg');
+            const particleCount = window.innerWidth < 480 ? 60 : window.innerWidth < 768 ? 80 : 100;
+            
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.style.position = 'absolute';
+                particle.style.width = `${Math.random() * 3 + 1}px`;
+                particle.style.height = particle.style.width;
+                particle.style.background = `rgba(255, 255, 255, ${Math.random() * 0.6 + 0.1})`;
+                particle.style.borderRadius = '50%';
+                particle.style.top = `${Math.random() * 100}%`;
+                particle.style.left = `${Math.random() * 100}%`;
+                
+                const animationDuration = Math.random() * 20 + 10;
+                const animationDelay = Math.random() * 5;
+                
+                particle.style.animation = `floatParticles ${animationDuration}s ease-in-out ${animationDelay}s infinite`;
+                
+                bg.appendChild(particle);
+            }
+            
+            // 添加浮动粒子动画
+            const style = document.createElement('style');
+            style.innerHTML = `
+                @keyframes floatParticles {
+                    0%, 100% {
+                        transform: translate(0, 0);
+                    }
+                    50% {
+                        transform: translate(${Math.random() * 20 - 10}px, ${Math.random() * 20 - 10}px);
+                        opacity: ${Math.random() * 0.5 + 0.2};
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // 文件上传功能
+        const form = document.getElementById('uploadForm');
+        const resultDiv = document.getElementById('result');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                resultDiv.innerHTML = '<p>请先选择文件！</p>';
+                return;
+            }
+
+            // 显示加载动画
+            resultDiv.innerHTML = '<p style="text-align:center;">上传中，请稍候...</p>';
+            resultDiv.style.color = 'rgba(255,255,255,0.8)';
+            resultDiv.style.fontStyle = 'italic';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('https://api.xinyew.cn/api/jdtc', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (data.errno === 0) {
+                    resultDiv.innerHTML = `
+                        <p>上传成功！</p>
+                        <p>图片链接: <a href="${data.data.url}" target="_blank" style="color: #66bb6a; text-decoration: none;">${data.data.url}</a></p>
+                        <p>图片文件名: ${data.data.imgFile}</p>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<p>错误: ${data.error}</p>`;
+                    resultDiv.style.color = 'rgba(255, 120, 120, 0.9)';
+                    // 请求失败后2秒自动刷新网页
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p>请求失败：${error.message}</p>`;
+                resultDiv.style.color = 'rgba(255, 120, 120, 0.9)';
+                // 请求失败后3秒自动刷新网页
+                setTimeout(() => {
+                    location.reload();
+                }, 3000);
+            }
+        });
+
+        // 计算并显示网站运行时间
+        function updateRuntime() {
+            const startTime = new Date(2025, 6, 28);
+            startTime.setHours(0, 0, 0, 0); // 设置为当天零点
+            
+            const currentTime = new Date();
+            const diffTime = currentTime - startTime;
+            
+            // 计算天、小时、分钟、秒
+            const days = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diffTime % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diffTime % (1000 * 60)) / 1000);
+            
+            // 更新显示
+            document.getElementById('runtimeDays').textContent = days;
+            document.getElementById('runtimeHours').textContent = hours.toString().padStart(2, '0');
+            document.getElementById('runtimeMinutes').textContent = minutes.toString().padStart(2, '0');
+            document.getElementById('runtimeSeconds').textContent = seconds.toString().padStart(2, '0');
+        }
+        
+        // 初始更新运行时间
+        updateRuntime();
+        
+        // 每秒更新一次运行时间
+        setInterval(updateRuntime, 1000);
+        
+        // 初始化粒子背景
+        createParticleBackground();
+        
+        // 窗口大小变化时重绘粒子背景
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                const bg = document.getElementById('particle-bg');
+                while (bg.firstChild) {
+                    bg.removeChild(bg.firstChild);
+                }
+                createParticleBackground();
+            }, 200);
+        });
+    </script>
+</body>
+</html>
