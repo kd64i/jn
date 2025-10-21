@@ -381,6 +381,20 @@ function dataURLtoBlob(dataurl) {
 	  });
   }
 
+// function ipt(){
+// var oFReader = new FileReader();
+// var ofile = document.getElementById("ipt").files[0];
+// oFReader.readAsDataURL(ofile);
+// oFReader.onloadend = function(oFRevent){
+// var osrc = oFRevent.target.result;
+// OPICSRC=osrc;
+// setpic(osrc);
+// document.getElementById("picinfo").innerHTML="&emsp;"
+// }
+// }
+
+
+
 function ipt(){
 var oFReader = new FileReader();
 var ofile = document.getElementById("ipt").files[0];
@@ -388,10 +402,48 @@ oFReader.readAsDataURL(ofile);
 oFReader.onloadend = function(oFRevent){
 var osrc = oFRevent.target.result;
 OPICSRC=osrc;
-setpic(osrc);
-document.getElementById("picinfo").innerHTML="&emsp;"
+
+// 添加图片压缩和预览优化
+var img = new Image();
+img.onload = function() {
+    var maxWidth = 800; // 最大宽度限制
+    var maxHeight = 600; // 最大高度限制
+    var width = img.width;
+    var height = img.height;
+    
+    // 如果图片尺寸超过限制，进行压缩
+    if (width > maxWidth || height > maxHeight) {
+        var ratio = Math.min(maxWidth / width, maxHeight / height);
+        width = width * ratio;
+        height = height * ratio;
+        
+        var canvas = document.createElement('canvas');
+        var ctx = canvas.getContext('2d');
+        canvas.width = width;
+        canvas.height = height;
+        
+        ctx.drawImage(img, 0, 0, width, height);
+        var compressedSrc = canvas.toDataURL('image/jpeg', 0.8); // 使用JPEG格式压缩
+        
+        // 使用压缩后的图片进行预览
+        setpic(compressedSrc);
+    } else {
+        // 图片尺寸合适，直接使用原图
+        setpic(osrc);
+    }
+    
+    document.getElementById("picinfo").innerHTML="&emsp;"
+};
+img.src = osrc;
 }
 }
+
+
+
+
+
+
+
 
 function jiami(){
     
