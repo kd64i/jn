@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ybzj图片混淆工具 - 美化增强版</title>
+    <title>Ybzj图片混淆工具 - 修复版</title>
     <style>
         :root {
             --primary-color: #4a6cf7;
@@ -309,7 +309,7 @@
         <header>
             <h1>Ybzj图片混淆工具</h1>
             <p>安全、高效的图片加密与混淆解决方案</p>
-            <div class="version">v0.3.0</div>
+            <div class="version">v0.3.1</div>
         </header>
         
         <div class="main-content">
@@ -367,7 +367,7 @@
                 <h2 class="section-title">图片预览</h2>
                 
                 <div class="image-container">
-                    
+                    <img id="kimg" src="" alt="图片预览">
                     <div id="picinfo" class="image-info">请选择图片开始操作</div>
                 </div>
                 
@@ -387,136 +387,811 @@
     <input class="hidden-input" onchange="ipt()" type="file" id="ipt" accept="image/*">
     
     <script>
-        // 原有的MD5函数和核心逻辑保持不变
-        // 为了简洁，这里只展示新增的混淆算法和修改的部分
+        // 全局变量
+        let IMG = null;
+        let SRC = "";
+        let ORIGIN_SRC = "";
         
-        // 新增的对角线混淆算法
-        function encryptD(img1, key) {
-            // 实现对角线混淆算法
-            // 这里简化实现，实际需要完整实现
-            return encryptC(img1, key); // 临时使用像素混淆代替
+        // 文件选择函数
+        function xuanze() {
+            document.getElementById("ipt").click();
         }
         
-        function decryptD(img1, key) {
-            // 实现对角线混淆解密算法
-            return decryptC(img1, key); // 临时使用像素混淆代替
+        // 文件处理函数
+        function ipt() {
+            const fileInput = document.getElementById("ipt");
+            if (fileInput.files.length === 0) return;
+            
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                SRC = e.target.result;
+                ORIGIN_SRC = SRC;
+                
+                // 创建图片对象
+                const img = new Image();
+                img.onload = function() {
+                    IMG = img;
+                    document.getElementById("kimg").src = SRC;
+                    document.getElementById("picinfo").innerHTML = 
+                        `尺寸: ${img.width}×${img.height} | 格式: ${file.type} | 大小: ${(file.size/1024).toFixed(2)}KB`;
+                };
+                img.src = SRC;
+            };
+            
+            reader.readAsDataURL(file);
         }
         
-        // 新增的旋转块混淆算法
-        function encryptR(img1, key) {
-            // 实现旋转块混淆算法
-            // 这里简化实现，实际需要完整实现
-            return encryptB2(img1, key, 16, 16); // 临时使用方块混淆代替
-        }
-        
-        function decryptR(img1, key) {
-            // 实现旋转块混淆解密算法
-            return decryptB2(img1, key, 16, 16); // 临时使用方块混淆代替
-        }
-        
-        // 新增的波浪混淆算法
-        function encryptW(img1, key) {
-            // 实现波浪混淆算法
-            // 这里简化实现，实际需要完整实现
-            return encryptPE1(img1, parseFloat(key) || 0.666); // 临时使用PicEncrypt行模式代替
-        }
-        
-        function decryptW(img1, key) {
-            // 实现波浪混淆解密算法
-            return decryptPE1(img1, parseFloat(key) || 0.666); // 临时使用PicEncrypt行模式代替
-        }
-        
-        // 修改原有的jiami和jiemi函数以支持新算法
-        function jiami() {
-            if(SRC==""){alert("请先上传图片！")}else{
-                let t=Date.now();
-                let s="";
-                let a=document.getElementById("slct").value;
-                let k=document.getElementById("ikey").value;
-                let k2=parseFloat(document.getElementById("ikey2").value);
-
-                document.getElementById("imgwrap").style.display="none";
-                document.getElementById("loading").style.display="block";
-
-                requestAnimationFrame(function(){
-                    requestAnimationFrame(function(){
-                        // 原有算法
-                        if(a=="b"){
-                            s=encryptB2(IMG,k,32,32);
-                        }else if(a=="c"){
-                            s=encryptC(IMG,k);
-                        }else if(a=="pe1"){
-                            s=encryptPE1(IMG,k2);
-                        }else if(a=="pe2"){
-                            s=encryptPE2(IMG,k2);
-                        }else if(a=="c2"){
-                            s=encryptC2(IMG,k);
-                        }
-                        // 新增算法
-                        else if(a=="d"){
-                            s=encryptD(IMG,k);
-                        }else if(a=="r"){
-                            s=encryptR(IMG,k);
-                        }else if(a=="w"){
-                            s=encryptW(IMG,k);
-                        }
-                        
-                        setpic(s[0]);
-                        document.getElementById("picinfo").innerHTML="尺寸: "+s[1]+"×"+s[2]+" | 耗时: "+(Date.now()-t).toString()+"ms";
-                        document.getElementById("imgwrap").style.display="block";
-                        document.getElementById("loading").style.display="none";
-                    });
-                });
+        // 选择框变化处理
+        function selectonchange() {
+            const sel = document.getElementById("slct").value;
+            const ikey2 = document.getElementById("ikey2");
+            
+            if (sel === "pe1" || sel === "pe2") {
+                ikey2.style.display = "block";
+                document.getElementById("ikey").style.display = "none";
+            } else {
+                ikey2.style.display = "none";
+                document.getElementById("ikey").style.display = "block";
             }
+        }
+        
+        // 保存图片函数
+        function baocun() {
+            if (!SRC) {
+                alert("请先选择图片！");
+                return;
+            }
+            
+            const a = document.createElement("a");
+            a.href = SRC;
+            a.download = "obfuscated_image.png";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+        
+        // 还原函数
+        function huanyuan() {
+            if (!ORIGIN_SRC) {
+                alert("没有原始图片可还原！");
+                return;
+            }
+            
+            SRC = ORIGIN_SRC;
+            document.getElementById("kimg").src = SRC;
+            document.getElementById("picinfo").innerHTML = "已还原到原始图片";
+        }
+        
+        // MD5哈希函数（用于生成密钥）
+        function md5(inputString) {
+            function rotateLeft(lValue, iShiftBits) {
+                return (lValue << iShiftBits) | (lValue >>> (32 - iShiftBits));
+            }
+            
+            function addUnsigned(lX, lY) {
+                let lX8 = (lX & 0x80000000);
+                let lY8 = (lY & 0x80000000);
+                let lX4 = (lX & 0x40000000);
+                let lY4 = (lY & 0x40000000);
+                let lResult = (lX & 0x3FFFFFFF) + (lY & 0x3FFFFFFF);
+                
+                if (lX4 & lY4) {
+                    return (lResult ^ 0x80000000 ^ lX8 ^ lY8);
+                }
+                if (lX4 | lY4) {
+                    if (lResult & 0x40000000) {
+                        return (lResult ^ 0xC0000000 ^ lX8 ^ lY8);
+                    } else {
+                        return (lResult ^ 0x40000000 ^ lX8 ^ lY8);
+                    }
+                } else {
+                    return (lResult ^ lX8 ^ lY8);
+                }
+            }
+            
+            function F(x, y, z) { return (x & y) | ((~x) & z); }
+            function G(x, y, z) { return (x & z) | (y & (~z)); }
+            function H(x, y, z) { return x ^ y ^ z; }
+            function I(x, y, z) { return y ^ (x | (~z)); }
+            
+            function FF(a, b, c, d, x, s, ac) {
+                a = addUnsigned(a, addUnsigned(addUnsigned(F(b, c, d), x), ac));
+                return addUnsigned(rotateLeft(a, s), b);
+            }
+            
+            function GG(a, b, c, d, x, s, ac) {
+                a = addUnsigned(a, addUnsigned(addUnsigned(G(b, c, d), x), ac));
+                return addUnsigned(rotateLeft(a, s), b);
+            }
+            
+            function HH(a, b, c, d, x, s, ac) {
+                a = addUnsigned(a, addUnsigned(addUnsigned(H(b, c, d), x), ac));
+                return addUnsigned(rotateLeft(a, s), b);
+            }
+            
+            function II(a, b, c, d, x, s, ac) {
+                a = addUnsigned(a, addUnsigned(addUnsigned(I(b, c, d), x), ac));
+                return addUnsigned(rotateLeft(a, s), b);
+            }
+            
+            function convertToWordArray(string) {
+                let lWordCount;
+                let lMessageLength = string.length;
+                let lNumberOfWords_temp1 = lMessageLength + 8;
+                let lNumberOfWords = Math.floor(lNumberOfWords_temp1 / 64) + 1;
+                let lWordArray = new Array(lNumberOfWords * 16);
+                
+                for (let lCount = 0; lCount < lNumberOfWords * 16; lCount++) {
+                    lWordArray[lCount] = 0;
+                }
+                
+                for (lCount = 0; lCount < lMessageLength; lCount++) {
+                    lWordArray[lCount >> 2] |= (string.charCodeAt(lCount) << ((lCount % 4) * 8));
+                }
+                
+                lWordArray[lCount >> 2] |= (0x80 << ((lCount % 4) * 8));
+                lWordArray[lNumberOfWords * 16 - 2] = lMessageLength << 3;
+                lWordArray[lNumberOfWords * 16 - 1] = lMessageLength >>> 29;
+                
+                return lWordArray;
+            }
+            
+            function wordToHex(lValue) {
+                let wordToHexValue = "", wordToHexValue_temp = "";
+                
+                for (let lCount = 0; lCount <= 3; lCount++) {
+                    wordToHexValue_temp = (lValue >>> (lCount * 8)) & 255;
+                    wordToHexValue += ("0" + wordToHexValue_temp.toString(16)).slice(-2);
+                }
+                
+                return wordToHexValue;
+            }
+            
+            let x = convertToWordArray(inputString);
+            
+            let a = 0x67452301;
+            let b = 0xEFCDAB89;
+            let c = 0x98BADCFE;
+            let d = 0x10325476;
+            
+            for (let k = 0; k < x.length; k += 16) {
+                let AA = a;
+                let BB = b;
+                let CC = c;
+                let DD = d;
+                
+                a = FF(a, b, c, d, x[k + 0], 7, 0xD76AA478);
+                d = FF(d, a, b, c, x[k + 1], 12, 0xE8C7B756);
+                c = FF(c, d, a, b, x[k + 2], 17, 0x242070DB);
+                b = FF(b, c, d, a, x[k + 3], 22, 0xC1BDCEEE);
+                a = FF(a, b, c, d, x[k + 4], 7, 0xF57C0FAF);
+                d = FF(d, a, b, c, x[k + 5], 12, 0x4787C62A);
+                c = FF(c, d, a, b, x[k + 6], 17, 0xA8304613);
+                b = FF(b, c, d, a, x[k + 7], 22, 0xFD469501);
+                a = FF(a, b, c, d, x[k + 8], 7, 0x698098D8);
+                d = FF(d, a, b, c, x[k + 9], 12, 0x8B44F7AF);
+                c = FF(c, d, a, b, x[k + 10], 17, 0xFFFF5BB1);
+                b = FF(b, c, d, a, x[k + 11], 22, 0x895CD7BE);
+                a = FF(a, b, c, d, x[k + 12], 7, 0x6B901122);
+                d = FF(d, a, b, c, x[k + 13], 12, 0xFD987193);
+                c = FF(c, d, a, b, x[k + 14], 17, 0xA679438E);
+                b = FF(b, c, d, a, x[k + 15], 22, 0x49B40821);
+                
+                a = GG(a, b, c, d, x[k + 1], 5, 0xF61E2562);
+                d = GG(d, a, b, c, x[k + 6], 9, 0xC040B340);
+                c = GG(c, d, a, b, x[k + 11], 14, 0x265E5A51);
+                b = GG(b, c, d, a, x[k + 0], 20, 0xE9B6C7AA);
+                a = GG(a, b, c, d, x[k + 5], 5, 0xD62F105D);
+                d = GG(d, a, b, c, x[k + 10], 9, 0x2441453);
+                c = GG(c, d, a, b, x[k + 15], 14, 0xD8A1E681);
+                b = GG(b, c, d, a, x[k + 4], 20, 0xE7D3FBC8);
+                a = GG(a, b, c, d, x[k + 9], 5, 0x21E1CDE6);
+                d = GG(d, a, b, c, x[k + 14], 9, 0xC33707D6);
+                c = GG(c, d, a, b, x[k + 3], 14, 0xF4D50D87);
+                b = GG(b, c, d, a, x[k + 8], 20, 0x455A14ED);
+                a = GG(a, b, c, d, x[k + 13], 5, 0xA9E3E905);
+                d = GG(d, a, b, c, x[k + 2], 9, 0xFCEFA3F8);
+                c = GG(c, d, a, b, x[k + 7], 14, 0x676F02D9);
+                b = GG(b, c, d, a, x[k + 12], 20, 0x8D2A4C8A);
+                
+                a = HH(a, b, c, d, x[k + 5], 4, 0xFFFA3942);
+                d = HH(d, a, b, c, x[k + 8], 11, 0x8771F681);
+                c = HH(c, d, a, b, x[k + 11], 16, 0x6D9D6122);
+                b = HH(b, c, d, a, x[k + 14], 23, 0xFDE5380C);
+                a = HH(a, b, c, d, x[k + 1], 4, 0xA4BEEA44);
+                d = HH(d, a, b, c, x[k + 4], 11, 0x4BDECFA9);
+                c = HH(c, d, a, b, x[k + 7], 16, 0xF6BB4B60);
+                b = HH(b, c, d, a, x[k + 10], 23, 0xBEBFBC70);
+                a = HH(a, b, c, d, x[k + 13], 4, 0x289B7EC6);
+                d = HH(d, a, b, c, x[k + 0], 11, 0xEAA127FA);
+                c = HH(c, d, a, b, x[k + 3], 16, 0xD4EF3085);
+                b = HH(b, c, d, a, x[k + 6], 23, 0x4881D05);
+                a = HH(a, b, c, d, x[k + 9], 4, 0xD9D4D039);
+                d = HH(d, a, b, c, x[k + 12], 11, 0xE6DB99E5);
+                c = HH(c, d, a, b, x[k + 15], 16, 0x1FA27CF8);
+                b = HH(b, c, d, a, x[k + 2], 23, 0xC4AC5665);
+                
+                a = II(a, b, c, d, x[k + 0], 6, 0xF4292244);
+                d = II(d, a, b, c, x[k + 7], 10, 0x432AFF97);
+                c = II(c, d, a, b, x[k + 14], 15, 0xAB9423A7);
+                b = II(b, c, d, a, x[k + 5], 21, 0xFC93A039);
+                a = II(a, b, c, d, x[k + 12], 6, 0x655B59C3);
+                d = II(d, a, b, c, x[k + 3], 10, 0x8F0CCC92);
+                c = II(c, d, a, b, x[k + 10], 15, 0xFFEFF47D);
+                b = II(b, c, d, a, x[k + 1], 21, 0x85845DD1);
+                a = II(a, b, c, d, x[k + 8], 6, 0x6FA87E4F);
+                d = II(d, a, b, c, x[k + 15], 10, 0xFE2CE6E0);
+                c = II(c, d, a, b, x[k + 6], 15, 0xA3014314);
+                b = II(b, c, d, a, x[k + 13], 21, 0x4E0811A1);
+                a = II(a, b, c, d, x[k + 4], 6, 0xF7537E82);
+                d = II(d, a, b, c, x[k + 11], 10, 0xBD3AF235);
+                c = II(c, d, a, b, x[k + 2], 15, 0x2AD7D2BB);
+                b = II(b, c, d, a, x[k + 9], 21, 0xEB86D391);
+                
+                a = addUnsigned(a, AA);
+                b = addUnsigned(b, BB);
+                c = addUnsigned(c, CC);
+                d = addUnsigned(d, DD);
+            }
+            
+            return wordToHex(a) + wordToHex(b) + wordToHex(c) + wordToHex(d);
+        }
+        
+        // 设置图片函数
+        function setpic(img) {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0);
+            SRC = canvas.toDataURL();
+            document.getElementById("kimg").src = SRC;
+        }
+        
+        // 混淆算法实现
+        // 方块混淆算法
+        function encryptB2(img, key, bw, bh) {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imgData.data;
+            
+            const hash = md5(key);
+            let seed = 0;
+            for (let i = 0; i < hash.length; i++) {
+                seed += hash.charCodeAt(i);
+            }
+            
+            const rng = new RNG(seed);
+            
+            const blocksX = Math.ceil(canvas.width / bw);
+            const blocksY = Math.ceil(canvas.height / bh);
+            const totalBlocks = blocksX * blocksY;
+            
+            const blockOrder = Array.from({length: totalBlocks}, (_, i) => i);
+            
+            // 打乱块顺序
+            for (let i = totalBlocks - 1; i > 0; i--) {
+                const j = Math.floor(rng.next() * (i + 1));
+                [blockOrder[i], blockOrder[j]] = [blockOrder[j], blockOrder[i]];
+            }
+            
+            const tempCanvas = document.createElement("canvas");
+            const tempCtx = tempCanvas.getContext("2d");
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            tempCtx.drawImage(canvas, 0, 0);
+            
+            // 重新排列块
+            for (let i = 0; i < totalBlocks; i++) {
+                const srcBlock = i;
+                const dstBlock = blockOrder[i];
+                
+                const srcX = (srcBlock % blocksX) * bw;
+                const srcY = Math.floor(srcBlock / blocksX) * bh;
+                const dstX = (dstBlock % blocksX) * bw;
+                const dstY = Math.floor(dstBlock / blocksX) * bh;
+                
+                const blockWidth = Math.min(bw, canvas.width - srcX);
+                const blockHeight = Math.min(bh, canvas.height - srcY);
+                
+                const blockData = tempCtx.getImageData(srcX, srcY, blockWidth, blockHeight);
+                ctx.putImageData(blockData, dstX, dstY);
+            }
+            
+            const resultImg = new Image();
+            resultImg.src = canvas.toDataURL();
+            return [resultImg, canvas.width, canvas.height];
+        }
+        
+        function decryptB2(img, key, bw, bh) {
+            return encryptB2(img, key, bw, bh);
+        }
+        
+        // 像素混淆算法
+        function encryptC(img, key) {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imgData.data;
+            
+            const hash = md5(key);
+            let seed = 0;
+            for (let i = 0; i < hash.length; i++) {
+                seed += hash.charCodeAt(i);
+            }
+            
+            const rng = new RNG(seed);
+            
+            // 打乱像素顺序
+            for (let i = data.length - 4; i > 0; i -= 4) {
+                const j = Math.floor(rng.next() * (i / 4)) * 4;
+                
+                for (let k = 0; k < 4; k++) {
+                    [data[i + k], data[j + k]] = [data[j + k], data[i + k]];
+                }
+            }
+            
+            ctx.putImageData(imgData, 0, 0);
+            
+            const resultImg = new Image();
+            resultImg.src = canvas.toDataURL();
+            return [resultImg, canvas.width, canvas.height];
+        }
+        
+        function decryptC(img, key) {
+            return encryptC(img, key);
+        }
+        
+        // 行像素混淆算法
+        function encryptC2(img, key) {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imgData.data;
+            
+            const hash = md5(key);
+            let seed = 0;
+            for (let i = 0; i < hash.length; i++) {
+                seed += hash.charCodeAt(i);
+            }
+            
+            const rng = new RNG(seed);
+            
+            // 打乱行顺序
+            const rowOrder = Array.from({length: canvas.height}, (_, i) => i);
+            for (let i = canvas.height - 1; i > 0; i--) {
+                const j = Math.floor(rng.next() * (i + 1));
+                [rowOrder[i], rowOrder[j]] = [rowOrder[j], rowOrder[i]];
+            }
+            
+            const tempCanvas = document.createElement("canvas");
+            const tempCtx = tempCanvas.getContext("2d");
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            tempCtx.drawImage(canvas, 0, 0);
+            
+            // 重新排列行
+            for (let y = 0; y < canvas.height; y++) {
+                const srcY = rowOrder[y];
+                const rowData = tempCtx.getImageData(0, srcY, canvas.width, 1);
+                ctx.putImageData(rowData, 0, y);
+            }
+            
+            const resultImg = new Image();
+            resultImg.src = canvas.toDataURL();
+            return [resultImg, canvas.width, canvas.height];
+        }
+        
+        function decryptC2(img, key) {
+            return encryptC2(img, key);
+        }
+        
+        // PicEncrypt兼容算法
+        function encryptPE1(img, key) {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imgData.data;
+            
+            const seed = Math.floor(key * 10000);
+            const rng = new RNG(seed);
+            
+            // 对每一行进行XOR操作
+            for (let y = 0; y < canvas.height; y++) {
+                const rowKey = Math.floor(rng.next() * 256);
+                for (let x = 0; x < canvas.width; x++) {
+                    const idx = (y * canvas.width + x) * 4;
+                    data[idx] ^= rowKey;     // R
+                    data[idx + 1] ^= rowKey; // G
+                    data[idx + 2] ^= rowKey; // B
+                }
+            }
+            
+            ctx.putImageData(imgData, 0, 0);
+            
+            const resultImg = new Image();
+            resultImg.src = canvas.toDataURL();
+            return [resultImg, canvas.width, canvas.height];
+        }
+        
+        function decryptPE1(img, key) {
+            return encryptPE1(img, key);
+        }
+        
+        function encryptPE2(img, key) {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imgData.data;
+            
+            const seed = Math.floor(key * 10000);
+            const rng = new RNG(seed);
+            
+            // 对每一行进行XOR操作
+            for (let y = 0; y < canvas.height; y++) {
+                const rowKey = Math.floor(rng.next() * 256);
+                for (let x = 0; x < canvas.width; x++) {
+                    const idx = (y * canvas.width + x) * 4;
+                    data[idx] ^= rowKey;     // R
+                    data[idx + 1] ^= rowKey; // G
+                    data[idx + 2] ^= rowKey; // B
+                }
+            }
+            
+            // 对每一列进行XOR操作
+            for (let x = 0; x < canvas.width; x++) {
+                const colKey = Math.floor(rng.next() * 256);
+                for (let y = 0; y < canvas.height; y++) {
+                    const idx = (y * canvas.width + x) * 4;
+                    data[idx] ^= colKey;     // R
+                    data[idx + 1] ^= colKey; // G
+                    data[idx + 2] ^= colKey; // B
+                }
+            }
+            
+            ctx.putImageData(imgData, 0, 0);
+            
+            const resultImg = new Image();
+            resultImg.src = canvas.toDataURL();
+            return [resultImg, canvas.width, canvas.height];
+        }
+        
+        function decryptPE2(img, key) {
+            return encryptPE2(img, key);
+        }
+        
+        // 新增混淆算法
+        // 对角线混淆算法
+        function encryptD(img, key) {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imgData.data;
+            
+            const hash = md5(key);
+            let seed = 0;
+            for (let i = 0; i < hash.length; i++) {
+                seed += hash.charCodeAt(i);
+            }
+            
+            const rng = new RNG(seed);
+            
+            // 对角线像素交换
+            for (let d = 0; d < canvas.width + canvas.height - 1; d++) {
+                const startX = Math.max(0, d - canvas.height + 1);
+                const startY = Math.max(0, canvas.height - d - 1);
+                const diagLength = Math.min(d + 1, canvas.width - startX, canvas.height - startY);
+                
+                // 打乱对角线上的像素
+                for (let i = diagLength - 1; i > 0; i--) {
+                    const j = Math.floor(rng.next() * (i + 1));
+                    
+                    const x1 = startX + i;
+                    const y1 = startY + i;
+                    const x2 = startX + j;
+                    const y2 = startY + j;
+                    
+                    const idx1 = (y1 * canvas.width + x1) * 4;
+                    const idx2 = (y2 * canvas.width + x2) * 4;
+                    
+                    for (let k = 0; k < 4; k++) {
+                        [data[idx1 + k], data[idx2 + k]] = [data[idx2 + k], data[idx1 + k]];
+                    }
+                }
+            }
+            
+            ctx.putImageData(imgData, 0, 0);
+            
+            const resultImg = new Image();
+            resultImg.src = canvas.toDataURL();
+            return [resultImg, canvas.width, canvas.height];
+        }
+        
+        function decryptD(img, key) {
+            return encryptD(img, key);
+        }
+        
+        // 旋转块混淆算法
+        function encryptR(img, key) {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            
+            const hash = md5(key);
+            let seed = 0;
+            for (let i = 0; i < hash.length; i++) {
+                seed += hash.charCodeAt(i);
+            }
+            
+            const rng = new RNG(seed);
+            
+            const blockSize = 16;
+            const blocksX = Math.ceil(canvas.width / blockSize);
+            const blocksY = Math.ceil(canvas.height / blockSize);
+            
+            const tempCanvas = document.createElement("canvas");
+            const tempCtx = tempCanvas.getContext("2d");
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            tempCtx.drawImage(canvas, 0, 0);
+            
+            // 对每个块进行随机旋转
+            for (let by = 0; by < blocksY; by++) {
+                for (let bx = 0; bx < blocksX; bx++) {
+                    const x = bx * blockSize;
+                    const y = by * blockSize;
+                    const width = Math.min(blockSize, canvas.width - x);
+                    const height = Math.min(blockSize, canvas.height - y);
+                    
+                    // 随机选择旋转角度 (0°, 90°, 180°, 270°)
+                    const rotation = Math.floor(rng.next() * 4);
+                    
+                    if (rotation === 0) continue; // 不旋转
+                    
+                    const blockData = tempCtx.getImageData(x, y, width, height);
+                    
+                    // 创建临时canvas进行旋转
+                    const rotateCanvas = document.createElement("canvas");
+                    const rotateCtx = rotateCanvas.getContext("2d");
+                    
+                    if (rotation === 1) { // 90°
+                        rotateCanvas.width = height;
+                        rotateCanvas.height = width;
+                        rotateCtx.translate(height, 0);
+                        rotateCtx.rotate(Math.PI / 2);
+                    } else if (rotation === 2) { // 180°
+                        rotateCanvas.width = width;
+                        rotateCanvas.height = height;
+                        rotateCtx.translate(width, height);
+                        rotateCtx.rotate(Math.PI);
+                    } else if (rotation === 3) { // 270°
+                        rotateCanvas.width = height;
+                        rotateCanvas.height = width;
+                        rotateCtx.translate(0, width);
+                        rotateCtx.rotate(-Math.PI / 2);
+                    }
+                    
+                    rotateCtx.putImageData(blockData, 0, 0);
+                    const rotatedData = rotateCtx.getImageData(0, 0, rotateCanvas.width, rotateCanvas.height);
+                    
+                    // 将旋转后的块放回原位置
+                    ctx.putImageData(rotatedData, x, y);
+                }
+            }
+            
+            const resultImg = new Image();
+            resultImg.src = canvas.toDataURL();
+            return [resultImg, canvas.width, canvas.height];
+        }
+        
+        function decryptR(img, key) {
+            return encryptR(img, key);
+        }
+        
+        // 波浪混淆算法
+        function encryptW(img, key) {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imgData.data;
+            
+            const hash = md5(key);
+            let seed = 0;
+            for (let i = 0; i < hash.length; i++) {
+                seed += hash.charCodeAt(i);
+            }
+            
+            const rng = new RNG(seed);
+            
+            // 波浪形像素位移
+            const amplitude = 5 + Math.floor(rng.next() * 10); // 振幅 5-15
+            const frequency = 0.05 + rng.next() * 0.1; // 频率
+            
+            for (let y = 0; y < canvas.height; y++) {
+                const waveOffset = Math.floor(amplitude * Math.sin(y * frequency));
+                
+                if (waveOffset === 0) continue;
+                
+                const rowData = new Uint8ClampedArray(canvas.width * 4);
+                
+                // 复制当前行数据
+                for (let x = 0; x < canvas.width; x++) {
+                    const srcIdx = (y * canvas.width + x) * 4;
+                    for (let k = 0; k < 4; k++) {
+                        rowData[x * 4 + k] = data[srcIdx + k];
+                    }
+                }
+                
+                // 应用波浪位移
+                for (let x = 0; x < canvas.width; x++) {
+                    const newX = (x + waveOffset + canvas.width) % canvas.width;
+                    const dstIdx = (y * canvas.width + newX) * 4;
+                    const srcIdx = x * 4;
+                    
+                    for (let k = 0; k < 4; k++) {
+                        data[dstIdx + k] = rowData[srcIdx + k];
+                    }
+                }
+            }
+            
+            ctx.putImageData(imgData, 0, 0);
+            
+            const resultImg = new Image();
+            resultImg.src = canvas.toDataURL();
+            return [resultImg, canvas.width, canvas.height];
+        }
+        
+        function decryptW(img, key) {
+            return encryptW(img, key);
+        }
+        
+        // 随机数生成器
+        class RNG {
+            constructor(seed) {
+                this.seed = seed;
+            }
+            
+            next() {
+                this.seed = (this.seed * 9301 + 49297) % 233280;
+                return this.seed / 233280;
+            }
+        }
+        
+        // 混淆函数
+        function jiami() {
+            if(SRC === ""){
+                alert("请先上传图片！");
+                return;
+            }
+            
+            const t = Date.now();
+            let s = "";
+            const a = document.getElementById("slct").value;
+            const k = document.getElementById("ikey").value;
+            const k2 = parseFloat(document.getElementById("ikey2").value);
+
+            document.getElementById("kimg").style.display = "none";
+            document.getElementById("loading").style.display = "block";
+
+            requestAnimationFrame(function(){
+                requestAnimationFrame(function(){
+                    // 原有算法
+                    if(a === "b"){
+                        s = encryptB2(IMG, k, 32, 32);
+                    } else if(a === "c"){
+                        s = encryptC(IMG, k);
+                    } else if(a === "pe1"){
+                        s = encryptPE1(IMG, k2);
+                    } else if(a === "pe2"){
+                        s = encryptPE2(IMG, k2);
+                    } else if(a === "c2"){
+                        s = encryptC2(IMG, k);
+                    }
+                    // 新增算法
+                    else if(a === "d"){
+                        s = encryptD(IMG, k);
+                    } else if(a === "r"){
+                        s = encryptR(IMG, k);
+                    } else if(a === "w"){
+                        s = encryptW(IMG, k);
+                    } else {
+                        alert("不支持的混淆模式！");
+                        document.getElementById("kimg").style.display = "block";
+                        document.getElementById("loading").style.display = "none";
+                        return;
+                    }
+                    
+                    setpic(s[0]);
+                    document.getElementById("picinfo").innerHTML = "尺寸: " + s[1] + "×" + s[2] + " | 耗时: " + (Date.now() - t).toString() + "ms";
+                    document.getElementById("kimg").style.display = "block";
+                    document.getElementById("loading").style.display = "none";
+                });
+            });
         }
 
         function jiemi() {
-            if(SRC==""){alert("请先上传图片！")}else{
-                let t=Date.now();
-                let s="";
-                let a=document.getElementById("slct").value;
-                let k=document.getElementById("ikey").value;
-                let k2=parseFloat(document.getElementById("ikey2").value);
-
-                document.getElementById("imgwrap").style.display="none";
-                document.getElementById("loading").style.display="block";
-
-                requestAnimationFrame(function(){
-                    requestAnimationFrame(function(){
-                        // 原有算法
-                        if(a=="b"){
-                            s=decryptB2(IMG,k,32,32);
-                        }else if(a=="c"){
-                            s=decryptC(IMG,k);
-                        }else if(a=="pe1"){
-                            s=decryptPE1(IMG,k2);
-                        }else if(a=="pe2"){
-                            s=decryptPE2(IMG,k2);
-                        }else if(a=="c2"){
-                            s=decryptC2(IMG,k);
-                        }
-                        // 新增算法
-                        else if(a=="d"){
-                            s=decryptD(IMG,k);
-                        }else if(a=="r"){
-                            s=decryptR(IMG,k);
-                        }else if(a=="w"){
-                            s=decryptW(IMG,k);
-                        }
-
-                        setpic(s[0]);
-                        document.getElementById("kimg").src=SRC;
-                        document.getElementById("picinfo").innerHTML="尺寸: "+s[1]+"×"+s[2]+" | 耗时: "+(Date.now()-t).toString()+"ms";
-                        document.getElementById("imgwrap").style.display="block";
-                        document.getElementById("loading").style.display="none";
-                    });
-                });
+            if(SRC === ""){
+                alert("请先上传图片！");
+                return;
             }
-        }
+            
+            const t = Date.now();
+            let s = "";
+            const a = document.getElementById("slct").value;
+            const k = document.getElementById("ikey").value;
+            const k2 = parseFloat(document.getElementById("ikey2").value);
 
-        // 其他原有函数保持不变...
-        // 这里省略了MD5函数和其他原有函数的完整代码以保持简洁
-        // 在实际应用中，需要将原有代码完整复制过来
+            document.getElementById("kimg").style.display = "none";
+            document.getElementById("loading").style.display = "block";
+
+            requestAnimationFrame(function(){
+                requestAnimationFrame(function(){
+                    // 原有算法
+                    if(a === "b"){
+                        s = decryptB2(IMG, k, 32, 32);
+                    } else if(a === "c"){
+                        s = decryptC(IMG, k);
+                    } else if(a === "pe1"){
+                        s = decryptPE1(IMG, k2);
+                    } else if(a === "pe2"){
+                        s = decryptPE2(IMG, k2);
+                    } else if(a === "c2"){
+                        s = decryptC2(IMG, k);
+                    }
+                    // 新增算法
+                    else if(a === "d"){
+                        s = decryptD(IMG, k);
+                    } else if(a === "r"){
+                        s = decryptR(IMG, k);
+                    } else if(a === "w"){
+                        s = decryptW(IMG, k);
+                    } else {
+                        alert("不支持的混淆模式！");
+                        document.getElementById("kimg").style.display = "block";
+                        document.getElementById("loading").style.display = "none";
+                        return;
+                    }
+
+                    setpic(s[0]);
+                    document.getElementById("picinfo").innerHTML = "尺寸: " + s[1] + "×" + s[2] + " | 耗时: " + (Date.now() - t).toString() + "ms";
+                    document.getElementById("kimg").style.display = "block";
+                    document.getElementById("loading").style.display = "none";
+                });
+            });
+        }
     </script>
 </body>
 </html>
