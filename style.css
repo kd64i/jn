@@ -113,3 +113,10 @@ background:#fff;
 border:1px solid #aaa;
 height:1.5rem;
 }
+#kimg {
+    max-width: 100%;
+    max-height: 400px; /* 限制最大高度 */
+    object-fit: contain; /* 保持宽高比 */
+    display: block;
+    margin: 0 auto;
+}
