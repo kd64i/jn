@@ -310,6 +310,7 @@ let MZSMshow=true;
 let SRC="";
 let OPICSRC="";
 let INFO1="请先上传图片！";
+let INFO2="本页面仅供技术研究使用，请勿用于非法用途，否则后果作者概不负责";
 
 function selectonchange(){
 if(["pe1","pe2"].indexOf(document.getElementById("slct").value)==-1){
@@ -424,9 +425,16 @@ if(a=="b"){
     s=encryptChaotic(IMG,k);
 }else if(a=="diffusion"){  // 新增
     s=encryptDiffusion(IMG,k);
+}else if(a=="arnold"){
+    s=encryptArnold(IMG,k);
 }else{
     s=encryptC2(IMG,k);
 }
+
+
+
+
+
 
 setpic(s[0]);
 document.getElementById("picinfo").innerHTML="size:&ensp;"+s[1]+"×"+s[2]+"&emsp;time:&ensp;"+(Date.now()-t).toString()+"ms"
@@ -470,9 +478,13 @@ if(a=="b"){
     s=decryptChaotic(IMG,k);
 }else if(a=="diffusion"){  // 新增
     s=decryptDiffusion(IMG,k);
+}else if(a=="arnold"){
+    s=decryptArnold(IMG,k);
 }else{
     s=decryptC2(IMG,k);
 }
+
+
 
 
 setpic(s[0]);
@@ -1594,4 +1606,273 @@ function decryptDiffusion(img1, key, blockSize = 16, iterations = 2) {
     resultCtx.drawImage(cv, 0, 0, wid, hit);
     
     return [resultCanvas.toDataURL(), wid, hit];
+}
+
+
+// 修复后的Arnold变换算法
+function encryptArnold(img1, key, iterations = 5) {
+    var cv = document.createElement("canvas");
+    var cvd = cv.getContext("2d");
+    var wid = img1.width;
+    var hit = img1.height;
+    
+    // 保持原始尺寸
+    cv.width = wid;
+    cv.height = hit;
+    cvd.drawImage(img1, 0, 0, wid, hit);
+    
+    var imgdata = cvd.getImageData(0, 0, wid, hit);
+    var data = imgdata.data;
+    
+    // 使用密钥生成变换参数
+    var keyHash = md5(key + "arnold");
+    var a = 1 + (parseInt(keyHash.substr(0, 2), 16) % 3);
+    var b = 1 + (parseInt(keyHash.substr(2, 2), 16) % 3);
+    
+    // 对图像中的最大正方形区域进行Arnold变换
+    var squareSize = Math.min(wid, hit);
+    
+    // 多轮Arnold变换
+    for (let iter = 0; iter < iterations; iter++) {
+        var newData = new Uint8ClampedArray(data);
+        
+        // 只处理正方形区域
+        for (let y = 0; y < squareSize; y++) {
+            for (let x = 0; x < squareSize; x++) {
+                // Arnold变换公式
+                var newX = (x + a * y) % squareSize;
+                var newY = (b * x + (a * b + 1) * y) % squareSize;
+                
+                // 计算原始图像中的实际位置
+                var offsetX = Math.floor((wid - squareSize) / 2);
+                var offsetY = Math.floor((hit - squareSize) / 2);
+                
+                var origX = offsetX + x;
+                var origY = offsetY + y;
+                var newOrigX = offsetX + newX;
+                var newOrigY = offsetY + newY;
+                
+                // 确保坐标在有效范围内
+                if (origX >= 0 && origX < wid && origY >= 0 && origY < hit &&
+                    newOrigX >= 0 && newOrigX < wid && newOrigY >= 0 && newOrigY < hit) {
+                    
+                    var origIndex = (origY * wid + origX) * 4;
+                    var newIndex = (newOrigY * wid + newOrigX) * 4;
+                    
+                    // 交换像素数据
+                    for (let c = 0; c < 4; c++) {
+                        newData[newIndex + c] = data[origIndex + c];
+                    }
+                }
+            }
+        }
+        data = newData;
+    }
+    
+    var oimgdata = new ImageData(data, wid, hit);
+    cvd.putImageData(oimgdata, 0, 0);
+    return [cv.toDataURL(), wid, hit];
+}
+
+function decryptArnold(img1, key, iterations = 5) {
+    var cv = document.createElement("canvas");
+    var cvd = cv.getContext("2d");
+    var wid = img1.width;
+    var hit = img1.height;
+    
+    cv.width = wid;
+    cv.height = hit;
+    cvd.drawImage(img1, 0, 0, wid, hit);
+    
+    var imgdata = cvd.getImageData(0, 0, wid, hit);
+    var data = imgdata.data;
+    
+    var keyHash = md5(key + "arnold");
+    var a = 1 + (parseInt(keyHash.substr(0, 2), 16) % 3);
+    var b = 1 + (parseInt(keyHash.substr(2, 2), 16) % 3);
+    
+    // 对图像中的最大正方形区域进行逆向Arnold变换
+    var squareSize = Math.min(wid, hit);
+    
+    // 逆向多轮变换
+    for (let iter = 0; iter < iterations; iter++) {
+        var newData = new Uint8ClampedArray(data);
+        
+        // 只处理正方形区域
+        for (let y = 0; y < squareSize; y++) {
+            for (let x = 0; x < squareSize; x++) {
+                // 逆向Arnold变换
+                var newX = ((a * b + 1) * x - a * y) % squareSize;
+                var newY = (-b * x + y) % squareSize;
+                
+                // 处理负值
+                if (newX < 0) newX += squareSize;
+                if (newY < 0) newY += squareSize;
+                
+                // 计算原始图像中的实际位置
+                var offsetX = Math.floor((wid - squareSize) / 2);
+                var offsetY = Math.floor((hit - squareSize) / 2);
+                
+                var origX = offsetX + x;
+                var origY = offsetY + y;
+                var newOrigX = offsetX + newX;
+                var newOrigY = offsetY + newY;
+                
+                // 确保坐标在有效范围内
+                if (origX >= 0 && origX < wid && origY >= 0 && origY < hit &&
+                    newOrigX >= 0 && newOrigX < wid && newOrigY >= 0 && newOrigY < hit) {
+                    
+                    var origIndex = (origY * wid + origX) * 4;
+                    var newIndex = (newOrigY * wid + newOrigX) * 4;
+                    
+                    // 交换像素数据（逆向恢复）
+                    for (let c = 0; c < 4; c++) {
+                        newData[newIndex + c] = data[origIndex + c];
+                    }
+                }
+            }
+        }
+        data = newData;
+    }
+    
+    var oimgdata = new ImageData(data, wid, hit);
+    cvd.putImageData(oimgdata, 0, 0);
+    return [cv.toDataURL(), wid, hit];
+}
+
+// 改进的Arnold变换算法（分块处理，适用于任意尺寸）
+function encryptArnold(img1, key, blockSize = 64, iterations = 3) {
+    var cv = document.createElement("canvas");
+    var cvd = cv.getContext("2d");
+    var wid = img1.width;
+    var hit = img1.height;
+    
+    cv.width = wid;
+    cv.height = hit;
+    cvd.drawImage(img1, 0, 0, wid, hit);
+    
+    var imgdata = cvd.getImageData(0, 0, wid, hit);
+    var data = imgdata.data;
+    
+    // 使用密钥生成变换参数
+    var keyHash = md5(key + "arnold_improved");
+    var a = 1 + (parseInt(keyHash.substr(0, 2), 16) % 3);
+    var b = 1 + (parseInt(keyHash.substr(2, 2), 16) % 3);
+    
+    // 分块处理
+    var blocksX = Math.ceil(wid / blockSize);
+    var blocksY = Math.ceil(hit / blockSize);
+    
+    // 多轮Arnold变换
+    for (let iter = 0; iter < iterations; iter++) {
+        var newData = new Uint8ClampedArray(data);
+        
+        // 对每个块进行处理
+        for (let by = 0; by < blocksY; by++) {
+            for (let bx = 0; bx < blocksX; bx++) {
+                // 处理当前块
+                for (let y = 0; y < blockSize; y++) {
+                    for (let x = 0; x < blockSize; x++) {
+                        var origX = bx * blockSize + x;
+                        var origY = by * blockSize + y;
+                        
+                        if (origX >= wid || origY >= hit) continue;
+                        
+                        // Arnold变换公式
+                        var newX = (x + a * y) % blockSize;
+                        var newY = (b * x + (a * b + 1) * y) % blockSize;
+                        
+                        var newOrigX = bx * blockSize + newX;
+                        var newOrigY = by * blockSize + newY;
+                        
+                        // 边界检查
+                        if (newOrigX >= wid) newOrigX = wid - 1;
+                        if (newOrigY >= hit) newOrigY = hit - 1;
+                        
+                        var origIndex = (origY * wid + origX) * 4;
+                        var newIndex = (newOrigY * wid + newOrigX) * 4;
+                        
+                        // 交换像素数据
+                        for (let c = 0; c < 4; c++) {
+                            newData[newIndex + c] = data[origIndex + c];
+                        }
+                    }
+                }
+            }
+        }
+        data = newData;
+    }
+    
+    var oimgdata = new ImageData(data, wid, hit);
+    cvd.putImageData(oimgdata, 0, 0);
+    return [cv.toDataURL(), wid, hit];
+}
+
+function decryptArnold(img1, key, blockSize = 64, iterations = 3) {
+    var cv = document.createElement("canvas");
+    var cvd = cv.getContext("2d");
+    var wid = img1.width;
+    var hit = img1.height;
+    
+    cv.width = wid;
+    cv.height = hit;
+    cvd.drawImage(img1, 0, 0, wid, hit);
+    
+    var imgdata = cvd.getImageData(0, 0, wid, hit);
+    var data = imgdata.data;
+    
+    var keyHash = md5(key + "arnold_improved");
+    var a = 1 + (parseInt(keyHash.substr(0, 2), 16) % 3);
+    var b = 1 + (parseInt(keyHash.substr(2, 2), 16) % 3);
+    
+    // 分块处理
+    var blocksX = Math.ceil(wid / blockSize);
+    var blocksY = Math.ceil(hit / blockSize);
+    
+    // 逆向多轮变换
+    for (let iter = 0; iter < iterations; iter++) {
+        var newData = new Uint8ClampedArray(data);
+        
+        // 对每个块进行逆向处理
+        for (let by = 0; by < blocksY; by++) {
+            for (let bx = 0; bx < blocksX; bx++) {
+                for (let y = 0; y < blockSize; y++) {
+                    for (let x = 0; x < blockSize; x++) {
+                        var origX = bx * blockSize + x;
+                        var origY = by * blockSize + y;
+                        
+                        if (origX >= wid || origY >= hit) continue;
+                        
+                        // 逆向Arnold变换
+                        var newX = ((a * b + 1) * x - a * y) % blockSize;
+                        var newY = (-b * x + y) % blockSize;
+                        
+                        // 处理负值
+                        if (newX < 0) newX += blockSize;
+                        if (newY < 0) newY += blockSize;
+                        
+                        var newOrigX = bx * blockSize + newX;
+                        var newOrigY = by * blockSize + newY;
+                        
+                        // 边界检查
+                        if (newOrigX >= wid) newOrigX = wid - 1;
+                        if (newOrigY >= hit) newOrigY = hit - 1;
+                        
+                        var origIndex = (origY * wid + origX) * 4;
+                        var newIndex = (newOrigY * wid + newOrigX) * 4;
+                        
+                        // 交换像素数据（逆向恢复）
+                        for (let c = 0; c < 4; c++) {
+                            newData[newIndex + c] = data[origIndex + c];
+                        }
+                    }
+                }
+            }
+        }
+        data = newData;
+    }
+    
+    var oimgdata = new ImageData(data, wid, hit);
+    cvd.putImageData(oimgdata, 0, 0);
+    return [cv.toDataURL(), wid, hit];
 }
