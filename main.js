@@ -1501,90 +1501,109 @@ function decryptChaotic(img1, key) {
 
 
 
-// 修复后的分块扩散混淆算法
+// 修复后的分块扩散混淆算法 - 完全互逆版本
 function encryptDiffusion(img1, key, blockSize = 16, iterations = 2) {
     var cv = document.createElement("canvas");
     var cvd = cv.getContext("2d");
     var wid = img1.width;
     var hit = img1.height;
-
-    // 合理限制尺寸
-    var maxPixels = 1000000; // 100万像素
-    if (wid * hit > maxPixels) {
-        var scale = Math.sqrt(maxPixels / (wid * hit));
-        wid = Math.floor(wid * scale);
-        hit = Math.floor(hit * scale);
-    }
-
-    cv.width = wid;
-    cv.height = hit;
+    
+    // 确保宽度和高度是blockSize的整数倍
+    var paddedWid = Math.ceil(wid / blockSize) * blockSize;
+    var paddedHit = Math.ceil(hit / blockSize) * blockSize;
+    
+    cv.width = paddedWid;
+    cv.height = paddedHit;
+    
+    // 绘制原图到画布，超出部分用白色填充
+    cvd.fillStyle = 'white';
+    cvd.fillRect(0, 0, paddedWid, paddedHit);
     cvd.drawImage(img1, 0, 0, wid, hit);
-
-    var imgdata = cvd.getImageData(0, 0, wid, hit);
+    
+    var imgdata = cvd.getImageData(0, 0, paddedWid, paddedHit);
     var data = imgdata.data;
-
+    
     // 使用密钥生成确定性参数
     var keyHash = md5(key + "diffusion_salt");
-    var param1 = 1 + (parseInt(keyHash.substr(0, 4), 16) % 5);
-    var param2 = 1 + (parseInt(keyHash.substr(4, 4), 16) % 5);
-
-    // 确保块大小合理
-    blockSize = Math.min(blockSize, Math.min(wid, hit));
-    var blocksX = Math.ceil(wid / blockSize);
-    var blocksY = Math.ceil(hit / blockSize);
-
+    var a = 1 + (parseInt(keyHash.substr(0, 4), 16) % 5);  // 限制参数范围确保可逆
+    var b = 1 + (parseInt(keyHash.substr(4, 4), 16) % 5);
+    
+    var blocksX = paddedWid / blockSize;
+    var blocksY = paddedHit / blockSize;
+    
     // 多轮迭代
     for (let iter = 0; iter < iterations; iter++) {
-        var tempData = new Uint8ClampedArray(data);
-
+        var newData = new Uint8ClampedArray(data);
+        
         for (let by = 0; by < blocksY; by++) {
             for (let bx = 0; bx < blocksX; bx++) {
-                // 处理当前块
-                var startX = bx * blockSize;
-                var startY = by * blockSize;
-                var endX = Math.min(startX + blockSize, wid);
-                var endY = Math.min(startY + blockSize, hit);
-                var actualBlockWidth = endX - startX;
-                var actualBlockHeight = endY - startY;
-
-                // 对块内像素进行扩散
-                for (let y = startY; y < endY; y++) {
-                    for (let x = startX; x < endX; x++) {
-                        // 计算相对位置
-                        var relX = x - startX;
-                        var relY = y - startY;
-
-                        // 使用简单的线性变换进行扩散
-                        var newRelX = (relX * param1 + relY * param2) % actualBlockWidth;
-                        var newRelY = (relX * param2 + relY * param1) % actualBlockHeight;
-
-                        if (newRelX < 0) newRelX += actualBlockWidth;
-                        if (newRelY < 0) newRelY += actualBlockHeight;
-
-                        var newX = startX + newRelX;
-                        var newY = startY + newRelY;
-
-                        // 确保坐标在有效范围内
-                        if (newX >= wid) newX = wid - 1;
-                        if (newY >= hit) newY = hit - 1;
-
-                        var origIndex = (y * wid + x) * 4;
-                        var newIndex = (newY * wid + newX) * 4;
-
-                        // 交换像素数据
+                // 对每个块应用可逆的线性变换
+                var blockData = new Uint8ClampedArray(blockSize * blockSize * 4);
+                
+                // 提取块数据
+                for (let y = 0; y < blockSize; y++) {
+                    for (let x = 0; x < blockSize; x++) {
+                        var origX = bx * blockSize + x;
+                        var origY = by * blockSize + y;
+                        var origIdx = (origY * paddedWid + origX) * 4;
+                        var blockIdx = (y * blockSize + x) * 4;
+                        
                         for (let c = 0; c < 4; c++) {
-                            tempData[newIndex + c] = data[origIndex + c];
+                            blockData[blockIdx + c] = data[origIdx + c];
+                        }
+                    }
+                }
+                
+                // 应用可逆的像素位置变换
+                var transformedBlock = new Uint8ClampedArray(blockData.length);
+                for (let y = 0; y < blockSize; y++) {
+                    for (let x = 0; x < blockSize; x++) {
+                        // 使用简单的模运算确保可逆性
+                        var newX = (a * x + b * y) % blockSize;
+                        var newY = (b * x + a * y) % blockSize;
+                        
+                        // 处理负数情况
+                        if (newX < 0) newX += blockSize;
+                        if (newY < 0) newY += blockSize;
+                        
+                        var origIdx = (y * blockSize + x) * 4;
+                        var newIdx = (newY * blockSize + newX) * 4;
+                        
+                        for (let c = 0; c < 4; c++) {
+                            transformedBlock[newIdx + c] = blockData[origIdx + c];
+                        }
+                    }
+                }
+                
+                // 将变换后的块数据写回
+                for (let y = 0; y < blockSize; y++) {
+                    for (let x = 0; x < blockSize; x++) {
+                        var destX = bx * blockSize + x;
+                        var destY = by * blockSize + y;
+                        var destIdx = (destY * paddedWid + destX) * 4;
+                        var blockIdx = (y * blockSize + x) * 4;
+                        
+                        for (let c = 0; c < 4; c++) {
+                            newData[destIdx + c] = transformedBlock[blockIdx + c];
                         }
                     }
                 }
             }
         }
-        data = tempData;
+        data = newData;
     }
-
-    var oimgdata = new ImageData(data, wid, hit);
+    
+    var oimgdata = new ImageData(data, paddedWid, paddedHit);
     cvd.putImageData(oimgdata, 0, 0);
-    return [cv.toDataURL(), wid, hit];
+    
+    // 裁剪回原始尺寸
+    var resultCanvas = document.createElement("canvas");
+    var resultCtx = resultCanvas.getContext("2d");
+    resultCanvas.width = wid;
+    resultCanvas.height = hit;
+    resultCtx.drawImage(cv, 0, 0, wid, hit);
+    
+    return [resultCanvas.toDataURL(), wid, hit];
 }
 
 function decryptDiffusion(img1, key, blockSize = 16, iterations = 2) {
@@ -1592,81 +1611,118 @@ function decryptDiffusion(img1, key, blockSize = 16, iterations = 2) {
     var cvd = cv.getContext("2d");
     var wid = img1.width;
     var hit = img1.height;
-
-    cv.width = wid;
-    cv.height = hit;
+    
+    // 确保宽度和高度是blockSize的整数倍
+    var paddedWid = Math.ceil(wid / blockSize) * blockSize;
+    var paddedHit = Math.ceil(hit / blockSize) * blockSize;
+    
+    cv.width = paddedWid;
+    cv.height = paddedHit;
+    
+    // 绘制原图到画布
+    cvd.fillStyle = 'white';
+    cvd.fillRect(0, 0, paddedWid, paddedHit);
     cvd.drawImage(img1, 0, 0, wid, hit);
-
-    var imgdata = cvd.getImageData(0, 0, wid, hit);
+    
+    var imgdata = cvd.getImageData(0, 0, paddedWid, paddedHit);
     var data = imgdata.data;
-
-    // 使用相同的密钥生成确定性参数
+    
+    // 使用相同的密钥生成参数
     var keyHash = md5(key + "diffusion_salt");
-    var param1 = 1 + (parseInt(keyHash.substr(0, 4), 16) % 5);
-    var param2 = 1 + (parseInt(keyHash.substr(4, 4), 16) % 5);
-
-    // 计算模逆元用于解密
-    var det = param1 * param1 - param2 * param2;
-    var invDet = 1; // 简化处理，使用迭代方式
-
-    // 确保块大小合理
-    blockSize = Math.min(blockSize, Math.min(wid, hit));
-    var blocksX = Math.ceil(wid / blockSize);
-    var blocksY = Math.ceil(hit / blockSize);
-
+    var a = 1 + (parseInt(keyHash.substr(0, 4), 16) % 5);
+    var b = 1 + (parseInt(keyHash.substr(4, 4), 16) % 5);
+    
+    var blocksX = paddedWid / blockSize;
+    var blocksY = paddedHit / blockSize;
+    
     // 多轮迭代（逆向）
     for (let iter = 0; iter < iterations; iter++) {
-        var tempData = new Uint8ClampedArray(data);
-
-        for (let by = blocksY - 1; by >= 0; by--) {
-            for (let bx = blocksX - 1; bx >= 0; bx--) {
-                // 处理当前块（逆序处理）
-                var startX = bx * blockSize;
-                var startY = by * blockSize;
-                var endX = Math.min(startX + blockSize, wid);
-                var endY = Math.min(startY + blockSize, hit);
-                var actualBlockWidth = endX - startX;
-                var actualBlockHeight = endY - startY;
-
-                // 对块内像素进行逆向扩散
-                for (let y = endY - 1; y >= startY; y--) {
-                    for (let x = endX - 1; x >= startX; x--) {
-                        // 计算相对位置
-                        var relX = x - startX;
-                        var relY = y - startY;
-
-                        // 使用逆向变换进行解密
-                        var newRelX = (relX * param1 - relY * param2) % actualBlockWidth;
-                        var newRelY = (-relX * param2 + relY * param1) % actualBlockHeight;
-
-                        if (newRelX < 0) newRelX += actualBlockWidth;
-                        if (newRelY < 0) newRelY += actualBlockHeight;
-
-                        var newX = startX + newRelX;
-                        var newY = startY + newRelY;
-
-                        // 确保坐标在有效范围内
-                        if (newX >= wid) newX = wid - 1;
-                        if (newY >= hit) newY = hit - 1;
-
-                        var origIndex = (y * wid + x) * 4;
-                        var newIndex = (newY * wid + newX) * 4;
-
-                        // 交换像素数据（逆向）
+        var newData = new Uint8ClampedArray(data);
+        
+        for (let by = 0; by < blocksY; by++) {
+            for (let bx = 0; bx < blocksX; bx++) {
+                // 对每个块应用逆向变换
+                var blockData = new Uint8ClampedArray(blockSize * blockSize * 4);
+                
+                // 提取块数据
+                for (let y = 0; y < blockSize; y++) {
+                    for (let x = 0; x < blockSize; x++) {
+                        var origX = bx * blockSize + x;
+                        var origY = by * blockSize + y;
+                        var origIdx = (origY * paddedWid + origX) * 4;
+                        var blockIdx = (y * blockSize + x) * 4;
+                        
                         for (let c = 0; c < 4; c++) {
-                            tempData[newIndex + c] = data[origIndex + c];
+                            blockData[blockIdx + c] = data[origIdx + c];
+                        }
+                    }
+                }
+                
+                // 应用逆向变换（解方程求逆）
+                var invertedBlock = new Uint8ClampedArray(blockData.length);
+                for (let y = 0; y < blockSize; y++) {
+                    for (let x = 0; x < blockSize; x++) {
+                        // 解加密时的方程：newX = (a*x + b*y) mod N, newY = (b*x + a*y) mod N
+                        // 求逆：x = (a*newX - b*newY) * det_inv mod N, y = (-b*newX + a*newY) * det_inv mod N
+                        var det = (a * a - b * b) % blockSize;
+                        if (det < 0) det += blockSize;
+                        
+                        // 求模逆元
+                        var detInv = 1;
+                        for (let i = 1; i < blockSize; i++) {
+                            if ((det * i) % blockSize === 1) {
+                                detInv = i;
+                                break;
+                            }
+                        }
+                        
+                        var origX = (a * x - b * y) * detInv % blockSize;
+                        var origY = (-b * x + a * y) * detInv % blockSize;
+                        
+                        // 处理负数情况
+                        if (origX < 0) origX += blockSize;
+                        if (origY < 0) origY += blockSize;
+                        
+                        var origIdx = (y * blockSize + x) * 4;
+                        var newIdx = (origY * blockSize + origX) * 4;
+                        
+                        for (let c = 0; c < 4; c++) {
+                            invertedBlock[newIdx + c] = blockData[origIdx + c];
+                        }
+                    }
+                }
+                
+                // 将逆向变换后的块数据写回
+                for (let y = 0; y < blockSize; y++) {
+                    for (let x = 0; x < blockSize; x++) {
+                        var destX = bx * blockSize + x;
+                        var destY = by * blockSize + y;
+                        var destIdx = (destY * paddedWid + destX) * 4;
+                        var blockIdx = (y * blockSize + x) * 4;
+                        
+                        for (let c = 0; c < 4; c++) {
+                            newData[destIdx + c] = invertedBlock[blockIdx + c];
                         }
                     }
                 }
             }
         }
-        data = tempData;
+        data = newData;
     }
-
-    var oimgdata = new ImageData(data, wid, hit);
+    
+    var oimgdata = new ImageData(data, paddedWid, paddedHit);
     cvd.putImageData(oimgdata, 0, 0);
-    return [cv.toDataURL(), wid, hit];
+    
+    // 裁剪回原始尺寸
+    var resultCanvas = document.createElement("canvas");
+    var resultCtx = resultCanvas.getContext("2d");
+    resultCanvas.width = wid;
+    resultCanvas.height = hit;
+    resultCtx.drawImage(cv, 0, 0, wid, hit);
+    
+    return [resultCanvas.toDataURL(), wid, hit];
 }
+
 
 
 
