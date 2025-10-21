@@ -310,7 +310,6 @@ let MZSMshow=true;
 let SRC="";
 let OPICSRC="";
 let INFO1="请先上传图片！";
-let INFO2="本页面仅供技术研究使用，请勿用于非法用途，否则后果作者概不负责";
 
 function selectonchange(){
 if(["pe1","pe2"].indexOf(document.getElementById("slct").value)==-1){
