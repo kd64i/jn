@@ -140,8 +140,8 @@
         }
         
         #display-img {
-            max-width: 100%;
-            max-height: 70vh;
+            max-width: calc(100vw - 32px);
+            max-height: calc(100vh - 32px);
             border-radius: 10px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
             display: none;
@@ -316,7 +316,7 @@
                 URL.revokeObjectURL(img.src);
             }
             img.src = src;
-            img.style.display = "block";
+            img.style.display = "inline-block";
         }
         
         function encrypt(imgElement) {
@@ -463,6 +463,12 @@
         
         // 初始化雪花效果
         window.addEventListener('load', createSnowEffect);
+    </script>
+    
+    <!-- 原有的雪花特效脚本（但已通过CSS解决覆盖问题） -->
+    <script>
+    // 原有的jQuery和wpSuperSnow脚本可以在这里添加
+    // 但由于我们通过CSS解决了覆盖问题，这些脚本不会影响按钮点击
     </script>
 </body>
 </html>
