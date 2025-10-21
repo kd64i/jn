@@ -1170,4 +1170,429 @@ function encryptRotate(img1, key, blockSize = 32) {
         }
     }
     
-    cvd.putImag
+    cvd.putImageData(oimgdata, 0, 0);
+    return [cv.toDataURL(), wid, hit];
+}
+
+function decryptRotate(img1, key, blockSize = 32) {
+    var cv = document.createElement("canvas");
+    var cvd = cv.getContext("2d");
+    var wid = img1.width;
+    var hit = img1.height;
+    
+    cv.width = wid;
+    cv.height = hit;
+    cvd.drawImage(img1, 0, 0, wid, hit);
+    
+    var imgdata = cvd.getImageData(0, 0, wid, hit);
+    var oimgdata = cvd.createImageData(wid, hit);
+    
+    // 生成随机旋转模式（与加密时相同）
+    var rotationMap = [];
+    var blocksX = Math.ceil(wid / blockSize);
+    var blocksY = Math.ceil(hit / blockSize);
+    
+    for (let by = 0; by < blocksY; by++) {
+        for (let bx = 0; bx < blocksX; bx++) {
+            var hash = md5(key + bx + "," + by);
+            var rotation = parseInt(hash.charAt(0), 16) % 4;
+            rotationMap[bx + by * blocksX] = rotation;
+            
+            // 解密时使用逆旋转
+            var inverseRotation = (4 - rotation) % 4;
+            
+            for (let y = 0; y < blockSize; y++) {
+                for (let x = 0; x < blockSize; x++) {
+                    var origX = bx * blockSize + x;
+                    var origY = by * blockSize + y;
+                    
+                    if (origX >= wid || origY >= hit) continue;
+                    
+                    var newX, newY;
+                    
+                    // 使用逆旋转恢复原始位置
+                    switch (inverseRotation) {
+                        case 0: // 0°
+                            newX = origX;
+                            newY = origY;
+                            break;
+                        case 1: // 逆时针90°（相当于顺时针270°）
+                            newX = bx * blockSize + y;
+                            newY = by * blockSize + (blockSize - 1 - x);
+                            break;
+                        case 2: // 180°
+                            newX = bx * blockSize + (blockSize - 1 - x);
+                            newY = by * blockSize + (blockSize - 1 - y);
+                            break;
+                        case 3: // 逆时针270°（相当于顺时针90°）
+                            newX = bx * blockSize + (blockSize - 1 - y);
+                            newY = by * blockSize + x;
+                            break;
+                    }
+                    
+                    if (newX >= wid) newX = wid - 1;
+                    if (newY >= hit) newY = hit - 1;
+                    if (newX < 0) newX = 0;
+                    if (newY < 0) newY = 0;
+                    
+                    var origIndex = 4 * (origX + origY * wid);
+                    var newIndex = 4 * (newX + newY * wid);
+                    
+                    oimgdata.data[newIndex] = imgdata.data[origIndex];
+                    oimgdata.data[newIndex + 1] = imgdata.data[origIndex + 1];
+                    oimgdata.data[newIndex + 2] = imgdata.data[origIndex + 2];
+                    oimgdata.data[newIndex + 3] = imgdata.data[origIndex + 3];
+                }
+            }
+        }
+    }
+    
+    cvd.putImageData(oimgdata, 0, 0);
+    return [cv.toDataURL(), wid, hit];
+}
+
+// 完全重写的混沌映射像素置乱算法
+function encryptChaotic(img1, key) {
+    var cv = document.createElement("canvas");
+    var cvd = cv.getContext("2d");
+    var wid = img1.width;
+    var hit = img1.height;
+    
+    // 合理限制尺寸
+    var maxPixels = 1000000; // 100万像素
+    if (wid * hit > maxPixels) {
+        var scale = Math.sqrt(maxPixels / (wid * hit));
+        wid = Math.floor(wid * scale);
+        hit = Math.floor(hit * scale);
+    }
+    
+    cv.width = wid;
+    cv.height = hit;
+    cvd.drawImage(img1, 0, 0, wid, hit);
+    
+    var imgdata = cvd.getImageData(0, 0, wid, hit);
+    var data = imgdata.data;
+    
+    // 生成确定性混沌序列
+    var keyHash = md5(key + "chaotic_encrypt");
+    var seed = 0;
+    for (let i = 0; i < 8; i++) {
+        seed = (seed * 256 + keyHash.charCodeAt(i)) % 2147483647;
+    }
+    seed = seed / 2147483647;
+    
+    var chaoticValue = seed;
+    var pixelCount = wid * hit;
+    
+    // 生成混沌序列作为索引映射
+    var chaoticSequence = new Array(pixelCount);
+    for (let i = 0; i < pixelCount; i++) {
+        chaoticValue = 3.9999 * chaoticValue * (1 - chaoticValue);
+        chaoticSequence[i] = chaoticValue;
+    }
+    
+    // 创建索引数组并排序
+    var indices = new Array(pixelCount);
+    for (let i = 0; i < pixelCount; i++) {
+        indices[i] = {value: chaoticSequence[i], index: i};
+    }
+    
+    // 按混沌值排序
+    indices.sort((a, b) => a.value - b.value);
+    
+    // 创建映射表：原始位置 -> 新位置
+    var mapping = new Array(pixelCount);
+    for (let i = 0; i < pixelCount; i++) {
+        mapping[indices[i].index] = i;
+    }
+    
+    // 应用像素置乱
+    var newData = new Uint8ClampedArray(data.length);
+    for (let i = 0; i < pixelCount; i++) {
+        var newPos = mapping[i];
+        var origIndex = i * 4;
+        var newIndex = newPos * 4;
+        
+        newData[newIndex] = data[origIndex];
+        newData[newIndex + 1] = data[origIndex + 1];
+        newData[newIndex + 2] = data[origIndex + 2];
+        newData[newIndex + 3] = data[origIndex + 3];
+    }
+    
+    var oimgdata = new ImageData(newData, wid, hit);
+    cvd.putImageData(oimgdata, 0, 0);
+    return [cv.toDataURL(), wid, hit];
+}
+
+function decryptChaotic(img1, key) {
+    var cv = document.createElement("canvas");
+    var cvd = cv.getContext("2d");
+    var wid = img1.width;
+    var hit = img1.height;
+    
+    cv.width = wid;
+    cv.height = hit;
+    cvd.drawImage(img1, 0, 0, wid, hit);
+    
+    var imgdata = cvd.getImageData(0, 0, wid, hit);
+    var data = imgdata.data;
+    
+    // 使用相同的密钥生成混沌序列
+    var keyHash = md5(key + "chaotic_encrypt");
+    var seed = 0;
+    for (let i = 0; i < 8; i++) {
+        seed = (seed * 256 + keyHash.charCodeAt(i)) % 2147483647;
+    }
+    seed = seed / 2147483647;
+    
+    var chaoticValue = seed;
+    var pixelCount = wid * hit;
+    
+    // 生成相同的混沌序列
+    var chaoticSequence = new Array(pixelCount);
+    for (let i = 0; i < pixelCount; i++) {
+        chaoticValue = 3.9999 * chaoticValue * (1 - chaoticValue);
+        chaoticSequence[i] = chaoticValue;
+    }
+    
+    // 创建索引数组并排序（与加密时相同）
+    var indices = new Array(pixelCount);
+    for (let i = 0; i < pixelCount; i++) {
+        indices[i] = {value: chaoticSequence[i], index: i};
+    }
+    
+    indices.sort((a, b) => a.value - b.value);
+    
+    // 创建逆映射表：新位置 -> 原始位置
+    var inverseMapping = new Array(pixelCount);
+    for (let i = 0; i < pixelCount; i++) {
+        inverseMapping[i] = indices[i].index;
+    }
+    
+    // 应用逆映射恢复图像
+    var newData = new Uint8ClampedArray(data.length);
+    for (let i = 0; i < pixelCount; i++) {
+        var origPos = inverseMapping[i];
+        var encryptedIndex = i * 4;
+        var originalIndex = origPos * 4;
+        
+        newData[originalIndex] = data[encryptedIndex];
+        newData[originalIndex + 1] = data[encryptedIndex + 1];
+        newData[originalIndex + 2] = data[encryptedIndex + 2];
+        newData[originalIndex + 3] = data[encryptedIndex + 3];
+    }
+    
+    var oimgdata = new ImageData(newData, wid, hit);
+    cvd.putImageData(oimgdata, 0, 0);
+    return [cv.toDataURL(), wid, hit];
+}
+
+
+
+
+// 修复后的分块扩散混淆算法
+function encryptDiffusion(img1, key, blockSize = 16, iterations = 2) {
+    var cv = document.createElement("canvas");
+    var cvd = cv.getContext("2d");
+    var wid = img1.width;
+    var hit = img1.height;
+    
+    // 确保宽度和高度是blockSize的整数倍
+    var paddedWid = Math.ceil(wid / blockSize) * blockSize;
+    var paddedHit = Math.ceil(hit / blockSize) * blockSize;
+    
+    cv.width = paddedWid;
+    cv.height = paddedHit;
+    
+    // 绘制原图到画布，超出部分透明
+    cvd.fillStyle = 'white';
+    cvd.fillRect(0, 0, paddedWid, paddedHit);
+    cvd.drawImage(img1, 0, 0, wid, hit);
+    
+    var imgdata = cvd.getImageData(0, 0, paddedWid, paddedHit);
+    var data = imgdata.data;
+    
+    // 使用密钥生成Arnold映射参数
+    var keyHash = md5(key);
+    var a = 1 + (parseInt(keyHash.substr(0, 4), 16) % 10);
+    var b = 1 + (parseInt(keyHash.substr(4, 4), 16) % 10);
+    
+    var blocksX = paddedWid / blockSize;
+    var blocksY = paddedHit / blockSize;
+    
+    // 多轮迭代
+    for (let iter = 0; iter < iterations; iter++) {
+        var newData = new Uint8ClampedArray(data);
+        
+        for (let by = 0; by < blocksY; by++) {
+            for (let bx = 0; bx < blocksX; bx++) {
+                // 对每个块应用Arnold猫映射
+                var blockData = new Uint8ClampedArray(blockSize * blockSize * 4);
+                
+                // 提取块数据
+                for (let y = 0; y < blockSize; y++) {
+                    for (let x = 0; x < blockSize; x++) {
+                        var origX = bx * blockSize + x;
+                        var origY = by * blockSize + y;
+                        var origIdx = (origY * paddedWid + origX) * 4;
+                        var blockIdx = (y * blockSize + x) * 4;
+                        
+                        for (let c = 0; c < 4; c++) {
+                            blockData[blockIdx + c] = data[origIdx + c];
+                        }
+                    }
+                }
+                
+                // Arnold猫映射扩散
+                var diffusedBlock = new Uint8ClampedArray(blockData.length);
+                for (let y = 0; y < blockSize; y++) {
+                    for (let x = 0; x < blockSize; x++) {
+                        // Arnold映射公式
+                        var newX = (x + a * y) % blockSize;
+                        var newY = (b * x + (a * b + 1) * y) % blockSize;
+                        
+                        if (newX < 0) newX += blockSize;
+                        if (newY < 0) newY += blockSize;
+                        
+                        var origIdx = (y * blockSize + x) * 4;
+                        var newIdx = (newY * blockSize + newX) * 4;
+                        
+                        for (let c = 0; c < 4; c++) {
+                            diffusedBlock[newIdx + c] = blockData[origIdx + c];
+                        }
+                    }
+                }
+                
+                // 将扩散后的块数据写回
+                for (let y = 0; y < blockSize; y++) {
+                    for (let x = 0; x < blockSize; x++) {
+                        var destX = bx * blockSize + x;
+                        var destY = by * blockSize + y;
+                        var destIdx = (destY * paddedWid + destX) * 4;
+                        var blockIdx = (y * blockSize + x) * 4;
+                        
+                        for (let c = 0; c < 4; c++) {
+                            newData[destIdx + c] = diffusedBlock[blockIdx + c];
+                        }
+                    }
+                }
+            }
+        }
+        data = newData;
+    }
+    
+    var oimgdata = new ImageData(data, paddedWid, paddedHit);
+    cvd.putImageData(oimgdata, 0, 0);
+    
+    // 裁剪回原始尺寸
+    var resultCanvas = document.createElement("canvas");
+    var resultCtx = resultCanvas.getContext("2d");
+    resultCanvas.width = wid;
+    resultCanvas.height = hit;
+    resultCtx.drawImage(cv, 0, 0, wid, hit);
+    
+    return [resultCanvas.toDataURL(), wid, hit];
+}
+
+function decryptDiffusion(img1, key, blockSize = 16, iterations = 2) {
+    var cv = document.createElement("canvas");
+    var cvd = cv.getContext("2d");
+    var wid = img1.width;
+    var hit = img1.height;
+    
+    // 确保宽度和高度是blockSize的整数倍
+    var paddedWid = Math.ceil(wid / blockSize) * blockSize;
+    var paddedHit = Math.ceil(hit / blockSize) * blockSize;
+    
+    cv.width = paddedWid;
+    cv.height = paddedHit;
+    
+    // 绘制原图到画布，超出部分透明
+    cvd.fillStyle = 'white';
+    cvd.fillRect(0, 0, paddedWid, paddedHit);
+    cvd.drawImage(img1, 0, 0, wid, hit);
+    
+    var imgdata = cvd.getImageData(0, 0, paddedWid, paddedHit);
+    var data = imgdata.data;
+    
+    // 使用相同的密钥生成Arnold映射参数
+    var keyHash = md5(key);
+    var a = 1 + (parseInt(keyHash.substr(0, 4), 16) % 10);
+    var b = 1 + (parseInt(keyHash.substr(4, 4), 16) % 10);
+    
+    var blocksX = paddedWid / blockSize;
+    var blocksY = paddedHit / blockSize;
+    
+    // 多轮迭代（逆向）
+    for (let iter = 0; iter < iterations; iter++) {
+        var newData = new Uint8ClampedArray(data);
+        
+        for (let by = 0; by < blocksY; by++) {
+            for (let bx = 0; bx < blocksX; bx++) {
+                // 对每个块应用逆向Arnold猫映射
+                var blockData = new Uint8ClampedArray(blockSize * blockSize * 4);
+                
+                // 提取块数据
+                for (let y = 0; y < blockSize; y++) {
+                    for (let x = 0; x < blockSize; x++) {
+                        var origX = bx * blockSize + x;
+                        var origY = by * blockSize + y;
+                        var origIdx = (origY * paddedWid + origX) * 4;
+                        var blockIdx = (y * blockSize + x) * 4;
+                        
+                        for (let c = 0; c < 4; c++) {
+                            blockData[blockIdx + c] = data[origIdx + c];
+                        }
+                    }
+                }
+                
+                // 逆向Arnold猫映射
+                var invertedBlock = new Uint8ClampedArray(blockData.length);
+                for (let y = 0; y < blockSize; y++) {
+                    for (let x = 0; x < blockSize; x++) {
+                        // 逆向Arnold映射公式
+                        var newX = ((a * b + 1) * x - a * y) % blockSize;
+                        var newY = (-b * x + y) % blockSize;
+                        
+                        if (newX < 0) newX += blockSize;
+                        if (newY < 0) newY += blockSize;
+                        
+                        var origIdx = (y * blockSize + x) * 4;
+                        var newIdx = (newY * blockSize + newX) * 4;
+                        
+                        for (let c = 0; c < 4; c++) {
+                            invertedBlock[newIdx + c] = blockData[origIdx + c];
+                        }
+                    }
+                }
+                
+                // 将逆向扩散后的块数据写回
+                for (let y = 0; y < blockSize; y++) {
+                    for (let x = 0; x < blockSize; x++) {
+                        var destX = bx * blockSize + x;
+                        var destY = by * blockSize + y;
+                        var destIdx = (destY * paddedWid + destX) * 4;
+                        var blockIdx = (y * blockSize + x) * 4;
+                        
+                        for (let c = 0; c < 4; c++) {
+                            newData[destIdx + c] = invertedBlock[blockIdx + c];
+                        }
+                    }
+                }
+            }
+        }
+        data = newData;
+    }
+    
+    var oimgdata = new ImageData(data, paddedWid, paddedHit);
+    cvd.putImageData(oimgdata, 0, 0);
+    
+    // 裁剪回原始尺寸
+    var resultCanvas = document.createElement("canvas");
+    var resultCtx = resultCanvas.getContext("2d");
+    resultCanvas.width = wid;
+    resultCanvas.height = hit;
+    resultCtx.drawImage(cv, 0, 0, wid, hit);
+    
+    return [resultCanvas.toDataURL(), wid, hit];
+}
