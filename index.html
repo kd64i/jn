@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>图夹工具 - 文件88gg隐写实现</title>
+    <title>图夹工具 - 文件55隐写实现</title>
     <style>
         /* 样式保持不变，与原始代码相同 */
         * {
@@ -1122,122 +1122,123 @@
             });
         }
         
-        // 从图像中提取数据 - 修复版本
-        function extractDataFromImage(image) {
-            return new Promise((resolve, reject) => {
-                try {
-                    // 创建Canvas
-                    const canvas = document.createElement('canvas');
-                    canvas.width = image.width;
-                    canvas.height = image.height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(image, 0, 0);
-                    
-                    // 获取图像数据
-                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    const data = imageData.data;
-                    
-                    // 提取二进制位
-                    const bits = [];
-                    for (let i = 0; i < data.length; i++) {
-                        // 跳过Alpha通道
-                        if ((i + 1) % 4 === 0) continue;
-                        
-                        // 提取最低有效位
-                        bits.push(data[i] & 1);
-                    }
-                    
-                    let bitIndex = 0;
-                    
-                    // 检查是否有足够的数据
-                    if (bits.length < 8) {
-                        resolve(null);
-                        return;
-                    }
-                    
-                    // 提取文件名长度
-                    const fileNameLength = extractByteFromBits(bits, bitIndex);
-                    bitIndex += 8;
-                    
-                    // 检查文件名长度是否合理
-                    if (fileNameLength < 0 || fileNameLength > 255) {
-                        resolve(null);
-                        return;
-                    }
-                    
-                    // 提取文件名
-                    const fileNameBytes = new Uint8Array(fileNameLength);
-                    for (let i = 0; i < fileNameLength; i++) {
-                        if (bitIndex + 8 > bits.length) {
-                            resolve(null);
-                            return;
-                        }
-                        fileNameBytes[i] = extractByteFromBits(bits, bitIndex);
-                        bitIndex += 8;
-                    }
-                    const fileName = new TextDecoder().decode(fileNameBytes);
-                    
-                    // 提取文件类型长度
-                    if (bitIndex + 8 > bits.length) {
-                        resolve(null);
-                        return;
-                    }
-                    const fileTypeLength = extractByteFromBits(bits, bitIndex);
-                    bitIndex += 8;
-                    
-                    // 检查文件类型长度是否合理
-                    if (fileTypeLength < 0 || fileTypeLength > 255) {
-                        resolve(null);
-                        return;
-                    }
-                    
-                    // 提取文件类型
-                    const fileTypeBytes = new Uint8Array(fileTypeLength);
-                    for (let i = 0; i < fileTypeLength; i++) {
-                        if (bitIndex + 8 > bits.length) {
-                            resolve(null);
-                            return;
-                        }
-                        fileTypeBytes[i] =                        extractByteFromBits(bits, bitIndex);
-                        bitIndex += 8;
-                    }
-                    const fileType = new TextDecoder().decode(fileTypeBytes);
-                    
-                    // 提取文件数据长度
-                    if (bitIndex + 32 > bits.length) {
-                        resolve(null);
-                        return;
-                    }
-                    const fileSize = extractIntFromBits(bits, bitIndex);
-                    bitIndex += 32;
-                    
-                    // 检查文件数据长度是否合理
-                    if (fileSize < 0 || fileSize > bits.length * 0.125) { // 粗略估计
-                        resolve(null);
-                        return;
-                    }
-                    
-                    // 提取文件数据
-                    const fileData = new Uint8Array(fileSize);
-                    for (let i = 0; i < fileSize; i++) {
-                        if (bitIndex + 8 > bits.length) {
-                            resolve(null);
-                            return;
-                        }
-                        fileData[i] = extractByteFromBits(bits, bitIndex);
-                        bitIndex += 8;
-                    }
-                    
-                    resolve({
-                        name: fileName,
-                        type: fileType,
-                        data: fileData
-                    });
-                } catch (error) {
-                    reject(error);
-                }
+function extractDataFromImage(image) {
+    return new Promise((resolve, reject) => {
+        try {
+            // 创建Canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = image.width;
+            canvas.height = image.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(image, 0, 0);
+            
+            // 获取图像数据
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            let bitIndex = 0;
+            
+            // 提取文件名长度
+            const fileNameLength = extractByteFromBitsOptimized(data, bitIndex);
+            bitIndex += 8;
+            
+            // 检查文件名长度是否合理
+            if (fileNameLength < 1 || fileNameLength > 255) {
+                resolve(null);
+                return;
+            }
+            
+            // 提取文件名
+            const fileNameBytes = new Uint8Array(fileNameLength);
+            for (let i = 0; i < fileNameLength; i++) {
+                fileNameBytes[i] = extractByteFromBitsOptimized(data, bitIndex);
+                bitIndex += 8;
+            }
+            const fileName = new TextDecoder().decode(fileNameBytes);
+            
+            // 提取文件类型长度
+            const fileTypeLength = extractByteFromBitsOptimized(data, bitIndex);
+            bitIndex += 8;
+            
+            // 检查文件类型长度是否合理
+            if (fileTypeLength < 1 || fileTypeLength > 255) {
+                resolve(null);
+                return;
+            }
+            
+            // 提取文件类型
+            const fileTypeBytes = new Uint8Array(fileTypeLength);
+            for (let i = 0; i < fileTypeLength; i++) {
+                fileTypeBytes[i] = extractByteFromBitsOptimized(data, bitIndex);
+                bitIndex += 8;
+            }
+            const fileType = new TextDecoder().decode(fileTypeBytes);
+            
+            // 提取文件数据长度
+            const fileSize = extractIntFromBitsOptimized(data, bitIndex);
+            bitIndex += 32;
+            
+            // 检查文件数据长度是否合理
+            if (fileSize < 1 || fileSize > (data.length * 0.75) / 8) {
+                resolve(null);
+                return;
+            }
+            
+            // 提取文件数据
+            const fileData = new Uint8Array(fileSize);
+            for (let i = 0; i < fileSize; i++) {
+                fileData[i] = extractByteFromBitsOptimized(data, bitIndex);
+                bitIndex += 8;
+            }
+            
+            resolve({
+                name: fileName,
+                type: fileType,
+                data: fileData
             });
+        } catch (error) {
+            reject(error);
         }
+    });
+}
+
+
+// 优化后的辅助函数：从图像数据中直接提取字节
+function extractByteFromBitsOptimized(data, startBitIndex) {
+    let byte = 0;
+    let pixelIndex = 0;
+    
+    for (let i = 0; i < 8; i++) {
+        // 计算当前位在图像数据中的位置
+        const totalBitsProcessed = startBitIndex + i;
+        const pixelOffset = Math.floor(totalBitsProcessed / 3);
+        const channelIndex = totalBitsProcessed % 3;
+        
+        // 计算在图像数据数组中的索引
+        const dataIndex = pixelOffset * 4 + channelIndex;
+        
+        // 确保不超出数组范围
+        if (dataIndex >= data.length) {
+            return 0;
+        }
+        
+        // 提取最低有效位并构建字节
+        byte = (byte << 1) | (data[dataIndex] & 1);
+    }
+    
+    return byte;
+}
+
+
+function extractIntFromBitsOptimized(data, startBitIndex) {
+    let int = 0;
+    for (let i = 0; i < 4; i++) {
+        int = (int << 8) | extractByteFromBitsOptimized(data, startBitIndex + i * 8);
+    }
+    return int;
+}
+
+
         
         // 辅助函数：将字节添加到二进制位数组
         function addByteToBits(bits, byte) {
@@ -1286,3 +1287,13 @@
 </body>
 
 </html>
+
+
+
+
+
+
+
+
+
+
