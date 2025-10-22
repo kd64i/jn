@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>图夹工具 - 文件88隐写实现</title>
+    <title>图夹工具 - 文件88gg隐写实现</title>
     <style>
         /* 样式保持不变，与原始代码相同 */
         * {
@@ -414,6 +415,7 @@
         }
     </style>
 </head>
+
 <body>
     <!-- 状态栏 -->
     <div class="status-bar">
@@ -423,20 +425,20 @@
             <span>38%</span>
         </div>
     </div>
-    
+
     <!-- 头部 -->
     <div class="header">
         <h1>图夹工具 - 文件隐写实现</h1>
         <p>安全隐藏文件到图片中</p>
     </div>
-    
+
     <!-- 标签页 -->
     <div class="container">
         <div class="tab-container">
             <div class="tab" data-tab="unpack">图片解包</div>
             <div class="tab active" data-tab="pack">图片打包</div>
         </div>
-        
+
         <!-- 图片打包内容 -->
         <div class="tab-content active" id="pack-tab">
             <!-- 表图选择 -->
@@ -456,7 +458,7 @@
                     <button class="remove-file" id="remove-cover">×</button>
                 </div>
             </div>
-            
+
             <!-- 里图选择 -->
             <div class="card">
                 <div class="card-title">选择隐藏文件</div>
@@ -474,7 +476,7 @@
                     <button class="remove-file" id="remove-file">×</button>
                 </div>
             </div>
-            
+
             <!-- 算法选择 -->
             <div class="card">
                 <div class="card-title">算法选择</div>
@@ -488,31 +490,31 @@
                         <div class="algorithm-desc">随机像素分布</div>
                     </div>
                 </div>
-                
+
                 <!-- 水印设置 -->
                 <div class="watermark-section">
                     <label class="watermark-label">密码:</label>
                     <input type="password" class="watermark-input" id="password" placeholder="设置密码保护（可选）">
                 </div>
             </div>
-            
+
             <!-- 制作图夹按钮 -->
             <button class="action-btn" id="create-btn">制作图夹</button>
-            
+
             <!-- 状态消息 -->
             <div class="status-message" id="pack-status"></div>
-            
+
             <!-- 打包结果 -->
             <div class="card result-section" id="result-section">
                 <div class="result-title">打包结果</div>
-                
+
                 <div class="result-actions">
                     <button class="result-btn" id="save-btn">保存图片</button>
                     <button class="result-btn primary" id="share-btn">分享</button>
                 </div>
             </div>
         </div>
-        
+
         <!-- 图片解包内容 -->
         <div class="tab-content" id="unpack-tab">
             <div class="card">
@@ -530,27 +532,27 @@
                     </div>
                     <button class="remove-file" id="remove-stego">×</button>
                 </div>
-                
+
                 <div class="watermark-section">
                     <label class="watermark-label">密码验证:</label>
                     <input type="password" class="watermark-input" id="extract-password" placeholder="输入密码进行验证（如已设置）">
                 </div>
-                
+
                 <button class="action-btn" id="extract-btn">提取文件</button>
-                
-                <!-- 状态消息 -->
-                <div class="status-message" id="extract-status"></div>
-                
+
+
+
+                <!-- 修改解包页面的结果区域 -->
                 <div class="result-section hidden" id="extract-result">
                     <div class="result-title">提取结果</div>
                     <div class="file-info">
-                        <div class="file-icon">📄📄</div>
+                        <div class="file-icon">📄📄📄📄</div>
                         <div class="file-details">
                             <div class="file-name" id="extracted-name">secret.txt</div>
                             <div class="file-size" id="extracted-size">15 KB</div>
                         </div>
                     </div>
-                    
+
                     <!-- 新增：预览区域 -->
                     <div class="preview-area">
                         <div class="preview-title">文件预览</div>
@@ -558,16 +560,20 @@
                             <!-- 预览内容将在这里显示 -->
                         </div>
                     </div>
-                    
+
                     <div class="result-actions">
-                        <button class="result-btn" id="save-stego-btn">保存图片</button>
+                        <!-- 修改：确保保存按钮存在且可见 -->
+                        <button class="result-btn" id="save-stego-btn">保存原图</button>
                         <button class="result-btn primary" id="download-btn">下载文件</button>
                     </div>
                 </div>
+
+
+
             </div>
         </div>
     </div>
-    
+
     <!-- 页脚 -->
     <div class="footer">
         <p>图夹工具 v1.0 | 基于LSB隐写算法</p>
@@ -854,6 +860,28 @@
                 displayFilePreview(extractedFile);
                 
                 extractResult.classList.remove('hidden');
+                
+                
+                
+                // 在extractBtn的click事件处理函数中，确保显示结果区域
+      //  extractResult.classList.remove('hidden');
+        
+        // 确保保存按钮的事件监听器存在且正确
+        document.getElementById('save-stego-btn').addEventListener('click', function() {
+            if (!stegoImageDataURL) {
+        alert('请先选择图夹图片！');
+        return;
+            }
+            
+            let alink = document.createElement("a");
+            alink.download = "pic_" + (parseInt(Date.now() / 1000) % Math.pow(36, 6) + Math.pow(36, 6)).toString(36).slice(1) + ".png";
+            alink.href = stegoImageDataURL;
+            alink.click();
+        });
+        
+                
+                
+                
                 
                 showStatus(extractStatus, `成功提取文件: ${extracted.name}`, 'success');
                 
@@ -1256,5 +1284,5 @@
         });
     </script>
 </body>
-</html>
 
+</html>
