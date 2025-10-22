@@ -33,7 +33,7 @@ function jiami() {
                 } else if (a == "diffusion") { // 新增
                     s = encryptDiffusion(IMG, k);
                 } else if (a == "arnold") {
-                    s = encryptArnold(IMG, k);
+                    s = encryptArnoldEnhanced(IMG, k);
                 } else {
                     s = encryptC2(IMG, k);
                 }
@@ -89,7 +89,7 @@ function jiemi() {
                 } else if (a == "diffusion") { // 新增
                     s = decryptDiffusion(IMG, k);
                 } else if (a == "arnold") {
-                    s = decryptArnold(IMG, k);
+                    s = decryptArnoldEnhanced(IMG, k);
                 } else {
                     s = decryptC2(IMG, k);
                 }
