@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>图夹工具 - 66文件隐写实现</title>
+    <title>图夹工具 - 65556文件隐写实现</title>
     <style>
+        /* 样式保持不变，与原始代码相同 */
         * {
             margin: 0;
             padding: 0;
@@ -442,12 +443,12 @@
             <div class="card">
                 <div class="card-title">表图选择</div>
                 <div class="upload-area" id="cover-upload">
-                    <i>📷</i>
+                    <i>📷📷</i>
                     <div class="upload-text">自定义上传</div>
                     <div class="upload-hint">点击选择图片文件</div>
                 </div>
                 <div class="file-info hidden" id="cover-info">
-                    <div class="file-icon">🖼️</div>
+                    <div class="file-icon">🖼🖼🖼️</div>
                     <div class="file-details">
                         <div class="file-name" id="cover-name">cover.jpg</div>
                         <div class="file-size" id="cover-size">2.1 MB</div>
@@ -460,12 +461,12 @@
             <div class="card">
                 <div class="card-title">选择隐藏文件</div>
                 <div class="upload-area" id="file-upload">
-                    <i>📁</i>
+                    <i>📁📁</i>
                     <div class="upload-text">选择隐藏文件</div>
                     <div class="upload-hint">点击选择要隐藏的文件</div>
                 </div>
                 <div class="file-info hidden" id="file-info">
-                    <div class="file-icon">📄</div>
+                    <div class="file-icon">📄📄</div>
                     <div class="file-details">
                         <div class="file-name" id="file-name">secret.txt</div>
                         <div class="file-size" id="file-size">15 KB</div>
@@ -517,12 +518,12 @@
             <div class="card">
                 <div class="card-title">选择图夹图片</div>
                 <div class="upload-area" id="stego-upload">
-                    <i>🖼️</i>
+                    <i>🖼🖼🖼️</i>
                     <div class="upload-text">选择图夹图片</div>
                     <div class="upload-hint">点击选择包含隐藏文件的图片</div>
                 </div>
                 <div class="file-info hidden" id="stego-info">
-                    <div class="file-icon">🔍</div>
+                    <div class="file-icon">🔍🔍</div>
                     <div class="file-details">
                         <div class="file-name" id="stego-name">stego.png</div>
                         <div class="file-size" id="stego-size">2.3 MB</div>
@@ -543,7 +544,7 @@
                 <div class="result-section hidden" id="extract-result">
                     <div class="result-title">提取结果</div>
                     <div class="file-info">
-                        <div class="file-icon">📄</div>
+                        <div class="file-icon">📄📄</div>
                         <div class="file-details">
                             <div class="file-name" id="extracted-name">secret.txt</div>
                             <div class="file-size" id="extracted-size">15 KB</div>
@@ -846,7 +847,6 @@
             }
         });
         
-        // 
         // 显示文件预览
         function displayFilePreview(fileInfo) {
             const blob = fileInfo.blob;
@@ -980,143 +980,199 @@
             return simpleEncrypt(data, password);
         }
         
-        // 将数据嵌入到图像中（LSB隐写）
+        // 将数据嵌入到图像中（LSB隐写）- 修复版本
         function embedDataInImage(image, fileData, fileName, fileType) {
-            return new Promise((resolve) => {
-                // 创建Canvas
-                const canvas = document.createElement('canvas');
-                canvas.width = image.width;
-                canvas.height = image.height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(image, 0, 0);
-                
-                // 获取图像数据
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const data = imageData.data;
-                
-                // 文件头信息：文件名长度(1字节) + 文件名 + 文件类型长度(1字节) + 文件类型 + 文件数据长度(4字节) + 文件数据
-                const fileNameBytes = new TextEncoder().encode(fileName);
-                const fileTypeBytes = new TextEncoder().encode(fileType);
-                
-                // 计算总数据长度
-                const totalLength = 1 + fileNameBytes.length + 1 + fileTypeBytes.length + 4 + fileData.length;
-                
-                // 检查图像容量是否足够
-                if (totalLength * 8 > data.length) {
-                    throw new Error('图像容量不足，无法隐藏该文件');
-                }
-                
-                // 将文件数据转换为二进制位
-                const bits = [];
-                
-                // 添加文件名长度
-                addByteToBits(bits, fileNameBytes.length);
-                
-                // 添加文件名
-                for (let i = 0; i < fileNameBytes.length; i++) {
-                    addByteToBits(bits, fileNameBytes[i]);
-                }
-                
-                // 添加文件类型长度
-                addByteToBits(bits, fileTypeBytes.length);
-                
-                // 添加文件类型
-                for (let i = 0; i < fileTypeBytes.length; i++) {
-                    addByteToBits(bits, fileTypeBytes[i]);
-                }
-                
-                // 添加文件数据长度
-                addIntToBits(bits, fileData.length);
-                
-                // 添加文件数据
-                for (let i = 0; i < fileData.length; i++) {
-                    addByteToBits(bits, fileData[i]);
-                }
-                
-                // 将二进制位嵌入到图像数据中
-                let bitIndex = 0;
-                for (let i = 0; i < data.length && bitIndex < bits.length; i++) {
-                    // 跳过Alpha通道
-                    if ((i + 1) % 4 === 0) continue;
+            return new Promise((resolve, reject) => {
+                try {
+                    // 创建Canvas
+                    const canvas = document.createElement('canvas');
+                    canvas.width = image.width;
+                    canvas.height = image.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(image, 0, 0);
                     
-                    // 替换最低有效位
-                    data[i] = (data[i] & 0xFE) | bits[bitIndex];
-                    bitIndex++;
+                    // 获取图像数据
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imageData.data;
+                    
+                    // 文件头信息：文件名长度(1字节) + 文件名 + 文件类型长度(1字节) + 文件类型 + 文件数据长度(4字节) + 文件数据
+                    const fileNameBytes = new TextEncoder().encode(fileName);
+                    const fileTypeBytes = new TextEncoder().encode(fileType);
+                    
+                    // 计算总数据长度
+                    const totalLength = 1 + fileNameBytes.length + 1 + fileTypeBytes.length + 4 + fileData.byteLength;
+                    
+                    // 检查图像容量是否足够
+                    if (totalLength * 8 > data.length * 0.75) { // 每个像素有3个通道可用（跳过Alpha）
+                        throw new Error('图像容量不足，无法隐藏该文件');
+                    }
+                    
+                    // 将文件数据转换为二进制位
+                    const bits = [];
+                    
+                    // 添加文件名长度
+                    addByteToBits(bits, fileNameBytes.length);
+                    
+                    // 添加文件名
+                    for (let i = 0; i < fileNameBytes.length; i++) {
+                        addByteToBits(bits, fileNameBytes[i]);
+                    }
+                    
+                    // 添加文件类型长度
+                    addByteToBits(bits, fileTypeBytes.length);
+                    
+                    // 添加文件类型
+                    for (let i = 0; i < fileTypeBytes.length; i++) {
+                        addByteToBits(bits, fileTypeBytes[i]);
+                    }
+                    
+                    // 添加文件数据长度
+                    addIntToBits(bits, fileData.byteLength);
+                    
+                    // 添加文件数据
+                    const fileDataArray = new Uint8Array(fileData);
+                    for (let i = 0; i < fileDataArray.length; i++) {
+                        addByteToBits(bits, fileDataArray[i]);
+                    }
+                    
+                    // 将二进制位嵌入到图像数据中
+                    let bitIndex = 0;
+                    for (let i = 0; i < data.length && bitIndex < bits.length; i++) {
+                        // 跳过Alpha通道（每4个元素中的第4个）
+                        if ((i + 1) % 4 === 0) continue;
+                        
+                        // 替换最低有效位
+                        data[i] = (data[i] & 0xFE) | bits[bitIndex];
+                        bitIndex++;
+                    }
+                    
+                    // 添加结束标记（可选）
+                    // 可以添加一些特定的结束标记来表示数据结束
+                    
+                    // 更新Canvas
+                    ctx.putImageData(imageData, 0, 0);
+                    
+                    resolve(canvas);
+                } catch (error) {
+                    reject(error);
                 }
-                
-                // 更新Canvas
-                ctx.putImageData(imageData, 0, 0);
-                
-                resolve(canvas);
             });
         }
         
-        // 从图像中提取数据
+        // 从图像中提取数据 - 修复版本
         function extractDataFromImage(image) {
-            return new Promise((resolve) => {
-                // 创建Canvas
-                const canvas = document.createElement('canvas');
-                canvas.width = image.width;
-                canvas.height = image.height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(image, 0, 0);
-                
-                // 获取图像数据
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const data = imageData.data;
-                
-                // 提取二进制位
-                const bits = [];
-                for (let i = 0; i < data.length; i++) {
-                    // 跳过Alpha通道
-                    if ((i + 1) % 4 === 0) continue;
+            return new Promise((resolve, reject) => {
+                try {
+                    // 创建Canvas
+                    const canvas = document.createElement('canvas');
+                    canvas.width = image.width;
+                    canvas.height = image.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(image, 0, 0);
                     
-                    // 提取最低有效位
-                    bits.push(data[i] & 1);
-                }
-                
-                let bitIndex = 0;
-                
-                // 提取文件名长度
-                const fileNameLength = extractByteFromBits(bits, bitIndex);
-                bitIndex += 8;
-                
-                // 提取文件名
-                const fileNameBytes = new Uint8Array(fileNameLength);
-                for (let i = 0; i < fileNameLength; i++) {
-                    fileNameBytes[i] = extractByteFromBits(bits, bitIndex);
+                    // 获取图像数据
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imageData.data;
+                    
+                    // 提取二进制位
+                    const bits = [];
+                    for (let i = 0; i < data.length; i++) {
+                        // 跳过Alpha通道
+                        if ((i + 1) % 4 === 0) continue;
+                        
+                        // 提取最低有效位
+                        bits.push(data[i] & 1);
+                    }
+                    
+                    let bitIndex = 0;
+                    
+                    // 检查是否有足够的数据
+                    if (bits.length < 8) {
+                        resolve(null);
+                        return;
+                    }
+                    
+                    // 提取文件名长度
+                    const fileNameLength = extractByteFromBits(bits, bitIndex);
                     bitIndex += 8;
-                }
-                const fileName = new TextDecoder().decode(fileNameBytes);
-                
-                // 提取文件类型长度
-                const fileTypeLength = extractByteFromBits(bits, bitIndex);
-                bitIndex += 8;
-                
-                // 提取文件类型
-                const fileTypeBytes = new Uint8Array(fileTypeLength);
-                for (let i = 0; i < fileTypeLength; i++) {
-                    fileTypeBytes[i] = extractByteFromBits(bits, bitIndex);
+                    
+                    // 检查文件名长度是否合理
+                    if (fileNameLength < 0 || fileNameLength > 255) {
+                        resolve(null);
+                        return;
+                    }
+                    
+                    // 提取文件名
+                    const fileNameBytes = new Uint8Array(fileNameLength);
+                    for (let i = 0; i < fileNameLength; i++) {
+                        if (bitIndex + 8 > bits.length) {
+                            resolve(null);
+                            return;
+                        }
+                        fileNameBytes[i] = extractByteFromBits(bits, bitIndex);
+                        bitIndex += 8;
+                    }
+                    const fileName = new TextDecoder().decode(fileNameBytes);
+                    
+                    // 提取文件类型长度
+                    if (bitIndex + 8 > bits.length) {
+                        resolve(null);
+                        return;
+                    }
+                    const fileTypeLength = extractByteFromBits(bits, bitIndex);
                     bitIndex += 8;
+                    
+                    // 检查文件类型长度是否合理
+                    if (fileTypeLength < 0 || fileTypeLength > 255) {
+                        resolve(null);
+                        return;
+                    }
+                    
+                    // 提取文件类型
+                    const fileTypeBytes = new Uint8Array(fileTypeLength);
+                    for (let i = 0; i < fileTypeLength; i++) {
+                        if (bitIndex + 8 > bits.length) {
+                            resolve(null);
+                            return;
+                        }
+                        fileTypeBytes[i] = extractByteFromBits(bits, bitIndex);
+                        bitIndex += 8;
+                    }
+                    const fileType = new TextDecoder().decode(fileTypeBytes);
+                    
+                    // 提取文件数据长度
+                    if (bitIndex + 32 > bits.length) {
+                        resolve(null);
+                        return;
+                    }
+                    const fileSize = extractIntFromBits(bits, bitIndex);
+                    bitIndex += 32;
+                    
+                    // 检查文件数据长度是否合理
+                    if (fileSize < 0 || fileSize > bits.length * 0.125) { // 粗略估计
+                        resolve(null);
+                        return;
+                    }
+                    
+                    // 提取文件数据
+                    const fileData = new Uint8Array(fileSize);
+                    for (let i = 0; i < fileSize; i++) {
+                        if (bitIndex + 8 > bits.length) {
+                            resolve(null);
+                            return;
+                        }
+                        fileData[i] = extractByteFromBits(bits, bitIndex);
+                        bitIndex += 8;
+                    }
+                    
+                    resolve({
+                        name: fileName,
+                        type: fileType,
+                        data: fileData
+                    });
+                } catch (error) {
+                    reject(error);
                 }
-                const fileType = new TextDecoder().decode(fileTypeBytes);
-                
-                // 提取文件数据长度
-                const fileSize = extractIntFromBits(bits, bitIndex);
-                bitIndex += 32;
-                
-                // 提取文件数据
-                const fileData = new Uint8Array(fileSize);
-                for (let i = 0; i < fileSize; i++) {
-                    fileData[i] = extractByteFromBits(bits, bitIndex);
-                    bitIndex += 8;
-                }
-                
-                resolve({
-                    name: fileName,
-                    type: fileType,
-                    data: fileData
-                });
             });
         }
         
@@ -1151,16 +1207,6 @@
             }
             return int;
         }
-        
-        // 页面加载完成后的初始化
-        window.addEventListener('load', () => {
-            // 添加结果图片预览
-            const resultSection = document.getElementById('result-section');
-            const resultImage = document.createElement('img');
-            resultImage.id = 'result-image';
-            resultImage.className = 'result-image';
-            resultSection.insertBefore(resultImage, resultSection.querySelector('.result-actions'));
-        });
     </script>
 </body>
 </html>
