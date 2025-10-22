@@ -2,7 +2,6 @@
 function initParticleBackground() {
     const canvas = document.getElementById('background-canvas');
     const ctx = canvas.getContext('2d');
-
     // 设置canvas尺寸
     function resizeCanvas() {
         canvas.width = window.innerWidth;
@@ -10,7 +9,6 @@ function initParticleBackground() {
     }
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
-
     // 粒子配置
     const particles = [];
     const particleCount = 80;
@@ -19,13 +17,11 @@ function initParticleBackground() {
         y: null,
         radius: 100
     };
-
     // 鼠标移动监听
     window.addEventListener('mousemove', (e) => {
         mouse.x = e.x;
         mouse.y = e.y;
     });
-
     // 粒子类
     class Particle {
         constructor() {
@@ -36,31 +32,25 @@ function initParticleBackground() {
             this.speedY = Math.random() * 1 - 0.5;
             this.color = `rgba(74, 144, 226, ${Math.random() * 0.5 + 0.2})`;
         }
-
         update() {
             this.x += this.speedX;
             this.y += this.speedY;
-
             // 边界检测
             if (this.x > canvas.width) this.x = 0;
             else if (this.x < 0) this.x = canvas.width;
-
             if (this.y > canvas.height) this.y = 0;
             else if (this.y < 0) this.y = canvas.height;
-
             // 鼠标交互
             if (mouse.x !== null && mouse.y !== null) {
                 const dx = mouse.x - this.x;
                 const dy = mouse.y - this.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
-
                 if (distance < mouse.radius) {
                     this.speedX = -dx * 0.02;
                     this.speedY = -dy * 0.02;
                 }
             }
         }
-
         draw() {
             ctx.fillStyle = this.color;
             ctx.beginPath();
@@ -68,14 +58,12 @@ function initParticleBackground() {
             ctx.fill();
         }
     }
-
     // 初始化粒子
     function init() {
         for (let i = 0; i < particleCount; i++) {
             particles.push(new Particle());
         }
     }
-
     // 连接粒子
     function connectParticles() {
         for (let a = 0; a < particles.length; a++) {
@@ -83,7 +71,6 @@ function initParticleBackground() {
                 const dx = particles[a].x - particles[b].x;
                 const dy = particles[a].y - particles[b].y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
-
                 if (distance < 100) {
                     ctx.strokeStyle = `rgba(74, 144, 226, ${0.2 * (1 - distance / 100)})`;
                     ctx.lineWidth = 0.5;
@@ -95,20 +82,16 @@ function initParticleBackground() {
             }
         }
     }
-
     // 动画循环
     function animate() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
         for (let i = 0; i < particles.length; i++) {
             particles[i].update();
             particles[i].draw();
         }
-
         connectParticles();
         requestAnimationFrame(animate);
     }
-
     init();
     animate();
 }
