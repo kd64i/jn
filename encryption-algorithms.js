@@ -1,78 +1,5 @@
-// Hilbert曲线像素混淆算法
-function encryptHilbert(img1, key) {
-    var cv = document.createElement("canvas");
-    var cvd = cv.getContext("2d");
-    var wid = img1.width;
-    var hit = img1.height;
-    var imgdata;
-    var oimgdata;
-
-    // 缩放大小
-    if (wid * hit > SIZE) {
-        wid = parseInt(Math.pow(SIZE * img1.width / img1.height, 1 / 2));
-        hit = parseInt(Math.pow(SIZE * img1.height / img1.width, 1 / 2));
-    }
-
-    cv.width = wid;
-    cv.height = hit;
-    cvd.drawImage(img1, 0, 0, wid, hit);
-
-    imgdata = cvd.getImageData(0, 0, wid, hit);
-    oimgdata = cvd.createImageData(wid, hit);
-
-    var curve = gilbert2d(wid, hit);
-    var offset = Math.round((Math.sqrt(5) - 1) / 2 * wid * hit);
-
-    for (let i = 0; i < wid * hit; i++) {
-        var old_pos = curve[i];
-        var new_pos = curve[(i + offset) % (wid * hit)];
-        var old_p = 4 * (old_pos[0] + old_pos[1] * wid);
-        var new_p = 4 * (new_pos[0] + new_pos[1] * wid);
-
-        oimgdata.data[new_p] = imgdata.data[old_p];
-        oimgdata.data[new_p + 1] = imgdata.data[old_p + 1];
-        oimgdata.data[new_p + 2] = imgdata.data[old_p + 2];
-        oimgdata.data[new_p + 3] = imgdata.data[old_p + 3];
-    }
-
-    cvd.putImageData(oimgdata, 0, 0);
-    return [cv.toDataURL(), wid, hit];
-}
-
-function decryptHilbert(img1, key) {
-    var cv = document.createElement("canvas");
-    var cvd = cv.getContext("2d");
-    var wid = img1.width;
-    var hit = img1.height;
-    var imgdata;
-    var oimgdata;
-
-    cv.width = wid;
-    cv.height = hit;
-    cvd.drawImage(img1, 0, 0, wid, hit);
-
-    imgdata = cvd.getImageData(0, 0, wid, hit);
-    oimgdata = cvd.createImageData(wid, hit);
-
-    var curve = gilbert2d(wid, hit);
-    var offset = Math.round((Math.sqrt(5) - 1) / 2 * wid * hit);
-
-    for (let i = 0; i < wid * hit; i++) {
-        var old_pos = curve[i];
-        var new_pos = curve[(i + offset) % (wid * hit)];
-        var old_p = 4 * (old_pos[0] + old_pos[1] * wid);
-        var new_p = 4 * (new_pos[0] + new_pos[1] * wid);
-
-        oimgdata.data[old_p] = imgdata.data[new_p];
-        oimgdata.data[old_p + 1] = imgdata.data[new_p + 1];
-        oimgdata.data[old_p + 2] = imgdata.data[new_p + 2];
-        oimgdata.data[old_p + 3] = imgdata.data[new_p + 3];
-    }
-
-    cvd.putImageData(oimgdata, 0, 0);
-    return [cv.toDataURL(), wid, hit];
-}
 //块混淆
+
 function encryptB2(img1, key, sx, sy) {
     var cv = document.createElement("canvas");
     var cvd = cv.getContext("2d");
@@ -89,13 +16,16 @@ function encryptB2(img1, key, sx, sy) {
     var n = 0;
     var ssx;
     var ssy;
+    
     // 缩放大小：如果图像像素超过SIZE，则调整大小以保持宽高比
     if (wid * hit > SIZE) {
         wid = parseInt(Math.pow(SIZE * img1.width / img1.height, 1 / 2));
         hit = parseInt(Math.pow(SIZE * img1.height / img1.width, 1 / 2));
     }
+
     wid1 = wid;
     hit1 = hit;
+
     // 调整宽度和高度以整除sx和sy
     while (wid % sx > 0) {
         wid++;
@@ -106,6 +36,7 @@ function encryptB2(img1, key, sx, sy) {
 
     ssx = wid / sx;
     ssy = hit / sy;
+
     cv.width = wid;
     cv.height = hit;
 
@@ -242,6 +173,7 @@ function encryptC(img1, key) {
             m = xl[m];
             n = (yl[m % hit] + n) % hit;
             n = yl[n];
+
             oimgdata.data[4 * (i + j * wid)] = imgdata.data[4 * (m + n * wid)];
             oimgdata.data[4 * (i + j * wid) + 1] = imgdata.data[4 * (m + n * wid) + 1];
             oimgdata.data[4 * (i + j * wid) + 2] = imgdata.data[4 * (m + n * wid) + 2];
@@ -466,6 +398,8 @@ function encryptPE2(img1, key) {
     var x = key;
     var m = 0;
     var n = 0;
+
+
     if (wid * hit > SIZE) {
         wid = parseInt(Math.pow(SIZE * img1.width / img1.height, 1 / 2));
         hit = parseInt(Math.pow(SIZE * img1.height / img1.width, 1 / 2));
@@ -484,6 +418,8 @@ function encryptPE2(img1, key) {
         arrayaddress = arrayaddress.sort(produceLogisticSort).map(a => a[1])
         for (let i = 0; i < wid; i++) {
             m = arrayaddress[i];
+
+
             oimgdata.data[4 * (i + j * wid)] = imgdata.data[4 * (m + j * wid)];
             oimgdata.data[4 * (i + j * wid) + 1] = imgdata.data[4 * (m + j * wid) + 1];
             oimgdata.data[4 * (i + j * wid) + 2] = imgdata.data[4 * (m + j * wid) + 2];
@@ -499,6 +435,9 @@ function encryptPE2(img1, key) {
         arrayaddress = arrayaddress.sort(produceLogisticSort).map(a => a[1])
         for (let j = 0; j < hit; j++) {
             n = arrayaddress[j];
+
+
+
             o2imgdata.data[4 * (i + j * wid)] = oimgdata.data[4 * (i + n * wid)];
             o2imgdata.data[4 * (i + j * wid) + 1] = oimgdata.data[4 * (i + n * wid) + 1];
             o2imgdata.data[4 * (i + j * wid) + 2] = oimgdata.data[4 * (i + n * wid) + 2];
@@ -523,6 +462,8 @@ function decryptPE2(img1, key) {
     var x = key;
     var m = 0;
     var n = 0;
+
+
     cv.width = wid;
     cv.height = hit;
     cvd.drawImage(img1, 0, 0, wid, hit);
@@ -560,6 +501,7 @@ function decryptPE2(img1, key) {
             o2imgdata.data[4 * (m + j * wid) + 3] = oimgdata.data[4 * (i + j * wid) + 3];
         }
     }
+
     cvd.putImageData(o2imgdata, 0, 0);
     return [cv.toDataURL(), wid, hit]
 }
@@ -619,18 +561,23 @@ function encryptRotate(img1, key, blockSize = 32) {
         wid = parseInt(Math.pow(SIZE * img1.width / img1.height, 1 / 2));
         hit = parseInt(Math.pow(SIZE * img1.height / img1.width, 1 / 2));
     }
+
     cv.width = wid;
     cv.height = hit;
     cvd.drawImage(img1, 0, 0, wid, hit);
+
     var imgdata = cvd.getImageData(0, 0, wid, hit);
     var oimgdata = cvd.createImageData(wid, hit);
+
     // 确保宽度和高度是blockSize的整数倍
     var paddedWid = Math.ceil(wid / blockSize) * blockSize;
     var paddedHit = Math.ceil(hit / blockSize) * blockSize;
+
     // 生成随机旋转模式
     var rotationMap = [];
     var blocksX = Math.ceil(paddedWid / blockSize);
     var blocksY = Math.ceil(paddedHit / blockSize);
+
     // 为每个块生成旋转角度（0°, 90°, 180°, 270°）
     for (let by = 0; by < blocksY; by++) {
         for (let bx = 0; bx < blocksX; bx++) {
@@ -655,8 +602,10 @@ function encryptRotate(img1, key, blockSize = 32) {
                 for (let x = 0; x < blockSize; x++) {
                     var origX = bx * blockSize + x;
                     var origY = by * blockSize + y;
+
                     // 如果超出实际图像范围，跳过
                     if (origX >= wid || origY >= hit) continue;
+
                     var newX, newY;
 
                     // 根据旋转角度计算新坐标
