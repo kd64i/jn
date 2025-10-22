@@ -1,4 +1,73 @@
 //块混淆
+
+function encryptB2(img1, key, sx, sy) {
+    var cv = document.createElement("canvas");
+    var cvd = cv.getContext("2d");
+    var wid = img1.width;
+    var hit = img1.height;
+    var wid1 = wid;
+    var hit1 = hit;
+    var imgdata;
+    var oimgdata;
+    var xl = new Array();
+    var yl = new Array();
+    var k = 8;
+    var m = 0;
+    var n = 0;
+    var ssx;
+    var ssy;
+    
+    // 缩放大小：如果图像像素超过SIZE，则调整大小以保持宽高比
+    if (wid * hit > SIZE) {
+        wid = parseInt(Math.pow(SIZE * img1.width / img1.height, 1 / 2));
+        hit = parseInt(Math.pow(SIZE * img1.height / img1.width, 1 / 2));
+    }
+
+    wid1 = wid;
+    hit1 = hit;
+
+    // 调整宽度和高度以整除sx和sy
+    while (wid % sx > 0) {
+        wid++;
+    }
+    while (hit % sy > 0) {
+        hit++;
+    }
+
+    ssx = wid / sx;
+    ssy = hit / sy;
+
+    cv.width = wid;
+    cv.height = hit;
+
+    // 修复：绘制图像时拉伸到画布大小，而不是平铺四个副本
+    cvd.drawImage(img1, 0, 0, wid, hit);
+
+    imgdata = cvd.getImageData(0, 0, wid, hit);
+    oimgdata = cvd.createImageData(wid, hit);
+
+    xl = amess(sx, key);
+    yl = amess(sy, key);
+
+    for (let i = 0; i < wid; i++) {
+        for (let j = 0; j < hit; j++) {
+            m = i;
+            n = j;
+            m = (xl[((n / ssy) | 0) % sx] * ssx + m) % wid;
+            m = xl[(m / ssx) | 0] * ssx + m % ssx;
+            n = (yl[((m / ssx) | 0) % sy] * ssy + n) % hit;
+            n = yl[(n / ssy) | 0] * ssy + n % ssy;
+
+            oimgdata.data[4 * (i + j * wid)] = imgdata.data[4 * (m + n * wid)];
+            oimgdata.data[4 * (i + j * wid) + 1] = imgdata.data[4 * (m + n * wid) + 1];
+            oimgdata.data[4 * (i + j * wid) + 2] = imgdata.data[4 * (m + n * wid) + 2];
+            oimgdata.data[4 * (i + j * wid) + 3] = imgdata.data[4 * (m + n * wid) + 3];
+        }
+    }
+    cvd.putImageData(oimgdata, 0, 0);
+    return [cv.toDataURL(), wid, hit];
+}
+
 function decryptB2(img1, key, sx, sy) {
     var cv = document.createElement("canvas");
     var cvd = cv.getContext("2d");
@@ -66,6 +135,7 @@ function decryptB2(img1, key, sx, sy) {
     cvd.putImageData(oimgdata, 0, 0);
     return [cv.toDataURL(), wid, hit];
 }
+
 
 //算法C,逐像素混淆
 function encryptC(img1, key) {
