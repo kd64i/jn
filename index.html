@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>图夹工具 - 65556文件隐写实现</title>
+    <title>图夹工具 - 文件88隐写实现</title>
     <style>
         /* 样式保持不变，与原始代码相同 */
         * {
@@ -560,6 +560,7 @@
                     </div>
                     
                     <div class="result-actions">
+                        <button class="result-btn" id="save-stego-btn">保存图片</button>
                         <button class="result-btn primary" id="download-btn">下载文件</button>
                     </div>
                 </div>
@@ -606,7 +607,9 @@
         let stegoFile = null;
         let stegoImageCanvas = null;
         let extractedFile = null;
+        let stegoImageDataURL = null; // 存储解包图片的DataURL
         
+        // 标签页切换
         // 标签页切换
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
@@ -715,6 +718,13 @@
             extractResult.classList.add('hidden');
             extractStatus.textContent = '';
             extractStatus.className = 'status-message';
+            
+            // 生成图片预览
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                stegoImageDataURL = e.target.result;
+            };
+            reader.readAsDataURL(file);
         }
         
         // 制作图夹按钮点击事件
@@ -761,7 +771,18 @@
                 
                 // 显示结果
                 const resultImage = document.getElementById('result-image');
-                resultImage.src = stegoCanvas.toDataURL();
+                if (!resultImage) {
+                    // 如果结果图片元素不存在，创建它
+                    const resultSection = document.getElementById('result-section');
+                    const newResultImage = document.createElement('img');
+                    newResultImage.id = 'result-image';
+                    newResultImage.className = 'result-image';
+                    resultSection.insertBefore(newResultImage, resultSection.querySelector('.result-actions'));
+                    newResultImage.src = stegoCanvas.toDataURL();
+                } else {
+                    resultImage.src = stegoCanvas.toDataURL();
+                }
+                
                 resultSection.style.display = 'block';
                 stegoImageCanvas = stegoCanvas;
                 
@@ -883,7 +904,7 @@
             }
         }
         
-        // 保存图片按钮
+        // 保存图片按钮（打包页面）
         document.getElementById('save-btn').addEventListener('click', () => {
             if (!stegoImageCanvas) return;
             
@@ -891,6 +912,20 @@
             link.download = 'stego_image.png';
             link.href = stegoImageCanvas.toDataURL();
             link.click();
+        });
+        
+        // 保存图片按钮（解包页面）- 新增功能
+        document.getElementById('save-stego-btn').addEventListener('click', function() {
+            if (!stegoImageDataURL) {
+                alert('请先选择图夹图片！');
+                return;
+            }
+            
+            // 使用您提供的保存逻辑
+            let alink = document.createElement("a");
+            alink.download = "pic_" + (parseInt(Date.now() / 1000) % Math.pow(36, 6) + Math.pow(36, 6)).toString(36).slice(1) + ".png";
+            alink.href = stegoImageDataURL;
+            alink.click();
         });
         
         // 分享按钮
@@ -1135,7 +1170,7 @@
                             resolve(null);
                             return;
                         }
-                        fileTypeBytes[i] = extractByteFromBits(bits, bitIndex);
+                        fileTypeBytes[i] =                        extractByteFromBits(bits, bitIndex);
                         bitIndex += 8;
                     }
                     const fileType = new TextDecoder().decode(fileTypeBytes);
@@ -1207,6 +1242,19 @@
             }
             return int;
         }
+        
+        // 页面加载完成后的初始化
+        window.addEventListener('load', () => {
+            // 添加结果图片预览（打包页面）
+            const resultSection = document.getElementById('result-section');
+            if (resultSection && !document.getElementById('result-image')) {
+                const resultImage = document.createElement('img');
+                resultImage.id = 'result-image';
+                resultImage.className = 'result-image';
+                resultSection.insertBefore(resultImage, resultSection.querySelector('.result-actions'));
+            }
+        });
     </script>
 </body>
 </html>
+
