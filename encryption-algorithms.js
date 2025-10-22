@@ -1,5 +1,4 @@
 //块混淆
-
 function encryptB2(img1, key, sx, sy) {
     var cv = document.createElement("canvas");
     var cvd = cv.getContext("2d");
