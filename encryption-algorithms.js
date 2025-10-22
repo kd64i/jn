@@ -4,43 +4,42 @@ function encryptB2(img1, key, sx, sy) {
     var cvd = cv.getContext("2d");
     var wid = img1.width;
     var hit = img1.height;
-    var wid1 = wid;
-    var hit1 = hit;
     var imgdata;
     var oimgdata;
-    var xl = new Array();
-    var yl = new Array();
-    var k = 8;
-    var m = 0;
-    var n = 0;
-    var ssx;
-    var ssy;
+    var xl, yl;
+    var ssx, ssy;
     
     // 缩放大小：如果图像像素超过SIZE，则调整大小以保持宽高比
     if (wid * hit > SIZE) {
-        wid = parseInt(Math.pow(SIZE * img1.width / img1.height, 1 / 2));
-        hit = parseInt(Math.pow(SIZE * img1.height / img1.width, 1 / 2));
+        // 使用更精确的缩放计算，避免浮点误差
+        var scale = Math.sqrt(SIZE / (wid * hit));
+        wid = Math.max(1, Math.floor(wid * scale));
+        hit = Math.max(1, Math.floor(hit * scale));
     }
 
-    wid1 = wid;
-    hit1 = hit;
-
-    // 调整宽度和高度以整除sx和sy
-    while (wid % sx > 0) {
-        wid++;
-    }
-    while (hit % sy > 0) {
-        hit++;
-    }
-
+    // 调整宽度和高度以整除sx和sy，确保块大小均匀
+    var originalWid = wid;
+    var originalHit = hit;
+    
+    wid = Math.ceil(wid / sx) * sx;
+    hit = Math.ceil(hit / sy) * sy;
+    
+    // 记录实际使用的尺寸
+    var actualWid = wid;
+    var actualHit = hit;
+    
     ssx = wid / sx;
     ssy = hit / sy;
 
     cv.width = wid;
     cv.height = hit;
 
-    // 修复：绘制图像时拉伸到画布大小，而不是平铺四个副本
-    cvd.drawImage(img1, 0, 0, wid, hit);
+    // 高质量图像绘制，禁用平滑处理以避免模糊
+    cvd.imageSmoothingEnabled = false;
+    cvd.imageSmoothingQuality = 'high';
+    
+    // 精确绘制图像，避免边缘问题
+    cvd.drawImage(img1, 0, 0, originalWid, originalHit, 0, 0, wid, hit);
 
     imgdata = cvd.getImageData(0, 0, wid, hit);
     oimgdata = cvd.createImageData(wid, hit);
@@ -48,23 +47,42 @@ function encryptB2(img1, key, sx, sy) {
     xl = amess(sx, key);
     yl = amess(sy, key);
 
+    // 优化像素映射算法，使用更精确的整数计算
     for (let i = 0; i < wid; i++) {
         for (let j = 0; j < hit; j++) {
-            m = i;
-            n = j;
-            m = (xl[((n / ssy) | 0) % sx] * ssx + m) % wid;
-            m = xl[(m / ssx) | 0] * ssx + m % ssx;
-            n = (yl[((m / ssx) | 0) % sy] * ssy + n) % hit;
-            n = yl[(n / ssy) | 0] * ssy + n % ssy;
+            let m = i;
+            let n = j;
+            
+            // 使用更精确的块索引计算
+            let blockY = Math.floor(n / ssy) % sx;
+            let blockX = Math.floor(m / ssx);
+            
+            m = (xl[blockY] * ssx + m) % wid;
+            m = xl[blockX] * ssx + (m % ssx);
+            
+            blockX = Math.floor(m / ssx) % sy;
+            let blockY2 = Math.floor(n / ssy);
+            
+            n = (yl[blockX] * ssy + n) % hit;
+            n = yl[blockY2] * ssy + (n % ssy);
 
-            oimgdata.data[4 * (i + j * wid)] = imgdata.data[4 * (m + n * wid)];
-            oimgdata.data[4 * (i + j * wid) + 1] = imgdata.data[4 * (m + n * wid) + 1];
-            oimgdata.data[4 * (i + j * wid) + 2] = imgdata.data[4 * (m + n * wid) + 2];
-            oimgdata.data[4 * (i + j * wid) + 3] = imgdata.data[4 * (m + n * wid) + 3];
+            // 确保索引在有效范围内
+            m = Math.max(0, Math.min(wid - 1, m));
+            n = Math.max(0, Math.min(hit - 1, n));
+            
+            let sourceIndex = 4 * (m + n * wid);
+            let targetIndex = 4 * (i + j * wid);
+            
+            // 批量复制像素数据，提高效率
+            oimgdata.data[targetIndex] = imgdata.data[sourceIndex];
+            oimgdata.data[targetIndex + 1] = imgdata.data[sourceIndex + 1];
+            oimgdata.data[targetIndex + 2] = imgdata.data[sourceIndex + 2];
+            oimgdata.data[targetIndex + 3] = imgdata.data[sourceIndex + 3];
         }
     }
+    
     cvd.putImageData(oimgdata, 0, 0);
-    return [cv.toDataURL(), wid, hit];
+    return [cv.toDataURL(), actualWid, actualHit];
 }
 
 function decryptB2(img1, key, sx, sy) {
@@ -72,43 +90,38 @@ function decryptB2(img1, key, sx, sy) {
     var cvd = cv.getContext("2d");
     var wid = img1.width;
     var hit = img1.height;
-    var wid1 = wid;
-    var hit1 = hit;
     var imgdata;
     var oimgdata;
-    var xl = new Array();
-    var yl = new Array();
-    var k = 8;
-    var m = 0;
-    var n = 0;
-    var ssx;
-    var ssy;
+    var xl, yl;
+    var ssx, ssy;
 
-    // 修复：添加与加密函数相同的缩放逻辑
+    // 与加密函数完全一致的缩放逻辑
     if (wid * hit > SIZE) {
-        wid = parseInt(Math.pow(SIZE * img1.width / img1.height, 1 / 2));
-        hit = parseInt(Math.pow(SIZE * img1.height / img1.width, 1 / 2));
+        var scale = Math.sqrt(SIZE / (wid * hit));
+        wid = Math.max(1, Math.floor(wid * scale));
+        hit = Math.max(1, Math.floor(hit * scale));
     }
 
-    wid1 = wid;
-    hit1 = hit;
-
-    // 调整宽度和高度以整除sx和sy
-    while (wid % sx > 0) {
-        wid++;
-    }
-    while (hit % sy > 0) {
-        hit++;
-    }
-
+    var originalWid = wid;
+    var originalHit = hit;
+    
+    wid = Math.ceil(wid / sx) * sx;
+    hit = Math.ceil(hit / sy) * sy;
+    
+    var actualWid = wid;
+    var actualHit = hit;
+    
     ssx = wid / sx;
     ssy = hit / sy;
 
     cv.width = wid;
     cv.height = hit;
 
-    // 修复：绘制图像时拉伸到画布大小，而不是平铺四个副本
-    cvd.drawImage(img1, 0, 0, wid, hit);
+    // 相同的绘制设置
+    cvd.imageSmoothingEnabled = false;
+    cvd.imageSmoothingQuality = 'high';
+    
+    cvd.drawImage(img1, 0, 0, originalWid, originalHit, 0, 0, wid, hit);
 
     imgdata = cvd.getImageData(0, 0, wid, hit);
     oimgdata = cvd.createImageData(wid, hit);
@@ -116,23 +129,41 @@ function decryptB2(img1, key, sx, sy) {
     xl = amess(sx, key);
     yl = amess(sy, key);
 
+    // 解密算法的逆运算，确保完全对称
     for (let i = 0; i < wid; i++) {
         for (let j = 0; j < hit; j++) {
-            m = i;
-            n = j;
-            m = (xl[((n / ssy) | 0) % sx] * ssx + m) % wid;
-            m = xl[(m / ssx) | 0] * ssx + m % ssx;
-            n = (yl[((m / ssx) | 0) % sy] * ssy + n) % hit;
-            n = yl[(n / ssy) | 0] * ssy + n % ssy;
+            let m = i;
+            let n = j;
+            
+            // 与加密过程完全对称的计算
+            let blockY = Math.floor(n / ssy) % sx;
+            let blockX = Math.floor(m / ssx);
+            
+            m = (xl[blockY] * ssx + m) % wid;
+            m = xl[blockX] * ssx + (m % ssx);
+            
+            blockX = Math.floor(m / ssx) % sy;
+            let blockY2 = Math.floor(n / ssy);
+            
+            n = (yl[blockX] * ssy + n) % hit;
+            n = yl[blockY2] * ssy + (n % ssy);
 
-            oimgdata.data[4 * (m + n * wid)] = imgdata.data[4 * (i + j * wid)];
-            oimgdata.data[4 * (m + n * wid) + 1] = imgdata.data[4 * (i + j * wid) + 1];
-            oimgdata.data[4 * (m + n * wid) + 2] = imgdata.data[4 * (i + j * wid) + 2];
-            oimgdata.data[4 * (m + n * wid) + 3] = imgdata.data[4 * (i + j * wid) + 3];
+            // 边界检查
+            m = Math.max(0, Math.min(wid - 1, m));
+            n = Math.max(0, Math.min(hit - 1, n));
+            
+            let sourceIndex = 4 * (i + j * wid);
+            let targetIndex = 4 * (m + n * wid);
+            
+            oimgdata.data[targetIndex] = imgdata.data[sourceIndex];
+            oimgdata.data[targetIndex + 1] = imgdata.data[sourceIndex + 1];
+            oimgdata.data[targetIndex + 2] = imgdata.data[sourceIndex + 2];
+            oimgdata.data[targetIndex + 3] = imgdata.data[sourceIndex + 3];
         }
     }
+    
     cvd.putImageData(oimgdata, 0, 0);
-    return [cv.toDataURL(), wid, hit];
+    return [cv.toDataURL(), actualWid, actualHit];
 }
 
 
