@@ -1,190 +1,71 @@
 //块混淆
-function encryptB2(img1, key, sx, sy) {
-    // 创建画布
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    
-    // 获取原始尺寸
-    let width = img1.width;
-    let height = img1.height;
-    
-    // 如果需要缩放，则计算缩放后的尺寸
-    if (width * height > SIZE) {
-        const scale = Math.sqrt(SIZE / (width * height));
-        width = Math.max(1, Math.floor(width * scale));
-        height = Math.max(1, Math.floor(height * scale));
-    }
-    
-    // 调整尺寸以确保能被sx和sy整除
-    const blockWidth = Math.ceil(width / sx);
-    const blockHeight = Math.ceil(height / sy);
-    const finalWidth = blockWidth * sx;
-    const finalHeight = blockHeight * sy;
-    
-    // 设置画布尺寸
-    canvas.width = finalWidth;
-    canvas.height = finalHeight;
-    
-    // 高质量绘制原图到画布
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(img1, 0, 0, width, height, 0, 0, finalWidth, finalHeight);
-    
-    // 获取图像数据
-    const imageData = ctx.getImageData(0, 0, finalWidth, finalHeight);
-    const outputData = ctx.createImageData(finalWidth, finalHeight);
-    
-    // 生成置换序列
-    const xSeq = amess(sx, key);
-    const ySeq = amess(sy, key);
-    
-    // 创建块映射表
-    const blockMap = new Array(sx * sy);
-    for (let i = 0; i < sx * sy; i++) {
-        const x = i % sx;
-        const y = Math.floor(i / sx);
-        const newX = xSeq[x];
-        const newY = ySeq[y];
-        blockMap[i] = newY * sx + newX;
-    }
-    
-    // 执行像素级置换
-    for (let blockY = 0; blockY < sy; blockY++) {
-        for (let blockX = 0; blockX < sx; blockX++) {
-            // 计算当前块的源位置和目标位置
-            const sourceBlockIndex = blockY * sx + blockX;
-            const targetBlockIndex = blockMap[sourceBlockIndex];
-            
-            const sourceBlockX = blockX * blockWidth;
-            const sourceBlockY = blockY * blockHeight;
-            const targetBlockX = (targetBlockIndex % sx) * blockWidth;
-            const targetBlockY = Math.floor(targetBlockIndex / sx) * blockHeight;
-            
-            // 复制块内所有像素
-            for (let y = 0; y < blockHeight; y++) {
-                for (let x = 0; x < blockWidth; x++) {
-                    // 计算源像素位置
-                    const srcX = sourceBlockX + x;
-                    const srcY = sourceBlockY + y;
-                    
-                    // 计算目标像素位置
-                    const dstX = targetBlockX + x;
-                    const dstY = targetBlockY + y;
-                    
-                    // 边界检查
-                    if (srcX >= finalWidth || srcY >= finalHeight || 
-                        dstX >= finalWidth || dstY >= finalHeight) {
-                        continue;
-                    }
-                    
-                    // 计算数据索引
-                    const srcIndex = (srcY * finalWidth + srcX) * 4;
-                    const dstIndex = (dstY * finalWidth + dstX) * 4;
-                    
-                    // 复制像素数据
-                    outputData.data[dstIndex] = imageData.data[srcIndex];
-                    outputData.data[dstIndex + 1] = imageData.data[srcIndex + 1];
-                    outputData.data[dstIndex + 2] = imageData.data[srcIndex + 2];
-                    outputData.data[dstIndex + 3] = imageData.data[srcIndex + 3];
-                }
-            }
-        }
-    }
-    
-    // 输出结果
-    ctx.putImageData(outputData, 0, 0);
-    return [canvas.toDataURL(), finalWidth, finalHeight];
-}
-
 function decryptB2(img1, key, sx, sy) {
-    // 创建画布
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    
-    // 使用加密图像的尺寸
-    const finalWidth = img1.width;
-    const finalHeight = img1.height;
-    
-    // 计算块尺寸
-    const blockWidth = finalWidth / sx;
-    const blockHeight = finalHeight / sy;
-    
-    // 设置画布尺寸
-    canvas.width = finalWidth;
-    canvas.height = finalHeight;
-    
-    // 高质量绘制加密图像到画布
-    ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(img1, 0, 0, finalWidth, finalHeight);
-    
-    // 获取图像数据
-    const imageData = ctx.getImageData(0, 0, finalWidth, finalHeight);
-    const outputData = ctx.createImageData(finalWidth, finalHeight);
-    
-    // 生成置换序列（与加密相同）
-    const xSeq = amess(sx, key);
-    const ySeq = amess(sy, key);
-    
-    // 创建逆映射表
-    const inverseBlockMap = new Array(sx * sy);
-    for (let i = 0; i < sx * sy; i++) {
-        const x = i % sx;
-        const y = Math.floor(i / sx);
-        const newX = xSeq[x];
-        const newY = ySeq[y];
-        const targetIndex = newY * sx + newX;
-        inverseBlockMap[targetIndex] = i;
+    var cv = document.createElement("canvas");
+    var cvd = cv.getContext("2d");
+    var wid = img1.width;
+    var hit = img1.height;
+    var wid1 = wid;
+    var hit1 = hit;
+    var imgdata;
+    var oimgdata;
+    var xl = new Array();
+    var yl = new Array();
+    var k = 8;
+    var m = 0;
+    var n = 0;
+    var ssx;
+    var ssy;
+
+    // 修复：添加与加密函数相同的缩放逻辑
+    if (wid * hit > SIZE) {
+        wid = parseInt(Math.pow(SIZE * img1.width / img1.height, 1 / 2));
+        hit = parseInt(Math.pow(SIZE * img1.height / img1.width, 1 / 2));
     }
-    
-    // 执行逆置换
-    for (let blockY = 0; blockY < sy; blockY++) {
-        for (let blockX = 0; blockX < sx; blockX++) {
-            // 计算当前块的源位置和目标位置（与加密相反）
-            const sourceBlockIndex = blockY * sx + blockX;
-            const targetBlockIndex = inverseBlockMap[sourceBlockIndex];
-            
-            const sourceBlockX = blockX * blockWidth;
-            const sourceBlockY = blockY * blockHeight;
-            const targetBlockX = (targetBlockIndex % sx) * blockWidth;
-            const targetBlockY = Math.floor(targetBlockIndex / sx) * blockHeight;
-            
-            // 复制块内所有像素
-            for (let y = 0; y < blockHeight; y++) {
-                for (let x = 0; x < blockWidth; x++) {
-                    // 计算源像素位置
-                    const srcX = sourceBlockX + x;
-                    const srcY = sourceBlockY + y;
-                    
-                    // 计算目标像素位置
-                    const dstX = targetBlockX + x;
-                    const dstY = targetBlockY + y;
-                    
-                    // 边界检查
-                    if (srcX >= finalWidth || srcY >= finalHeight || 
-                        dstX >= finalWidth || dstY >= finalHeight) {
-                        continue;
-                    }
-                    
-                    // 计算数据索引
-                    const srcIndex = (srcY * finalWidth + srcX) * 4;
-                    const dstIndex = (dstY * finalWidth + dstX) * 4;
-                    
-                    // 复制像素数据
-                    outputData.data[dstIndex] = imageData.data[srcIndex];
-                    outputData.data[dstIndex + 1] = imageData.data[srcIndex + 1];
-                    outputData.data[dstIndex + 2] = imageData.data[srcIndex + 2];
-                    outputData.data[dstIndex + 3] = imageData.data[srcIndex + 3];
-                }
-            }
+
+    wid1 = wid;
+    hit1 = hit;
+
+    // 调整宽度和高度以整除sx和sy
+    while (wid % sx > 0) {
+        wid++;
+    }
+    while (hit % sy > 0) {
+        hit++;
+    }
+
+    ssx = wid / sx;
+    ssy = hit / sy;
+
+    cv.width = wid;
+    cv.height = hit;
+
+    // 修复：绘制图像时拉伸到画布大小，而不是平铺四个副本
+    cvd.drawImage(img1, 0, 0, wid, hit);
+
+    imgdata = cvd.getImageData(0, 0, wid, hit);
+    oimgdata = cvd.createImageData(wid, hit);
+
+    xl = amess(sx, key);
+    yl = amess(sy, key);
+
+    for (let i = 0; i < wid; i++) {
+        for (let j = 0; j < hit; j++) {
+            m = i;
+            n = j;
+            m = (xl[((n / ssy) | 0) % sx] * ssx + m) % wid;
+            m = xl[(m / ssx) | 0] * ssx + m % ssx;
+            n = (yl[((m / ssx) | 0) % sy] * ssy + n) % hit;
+            n = yl[(n / ssy) | 0] * ssy + n % ssy;
+
+            oimgdata.data[4 * (m + n * wid)] = imgdata.data[4 * (i + j * wid)];
+            oimgdata.data[4 * (m + n * wid) + 1] = imgdata.data[4 * (i + j * wid) + 1];
+            oimgdata.data[4 * (m + n * wid) + 2] = imgdata.data[4 * (i + j * wid) + 2];
+            oimgdata.data[4 * (m + n * wid) + 3] = imgdata.data[4 * (i + j * wid) + 3];
         }
     }
-    
-    // 输出结果
-    ctx.putImageData(outputData, 0, 0);
-    return [canvas.toDataURL(), finalWidth, finalHeight];
+    cvd.putImageData(oimgdata, 0, 0);
+    return [cv.toDataURL(), wid, hit];
 }
-
-
-
 
 //算法C,逐像素混淆
 function encryptC(img1, key) {
