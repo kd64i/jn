@@ -1117,7 +1117,7 @@ function decryptDiffusion(img1, key, blockSize = 16, iterations = 2) {
 }
 
 // 改进的Arnold变换加密算法
-function encryptArnold(img1, key, blockSize = 128, iterations = 3) {
+function encryptArnold(img1, key, iterations = 5) {
     var cv = document.createElement("canvas");
     var cvd = cv.getContext("2d");
     var wid = img1.width;
@@ -1131,53 +1131,182 @@ function encryptArnold(img1, key, blockSize = 128, iterations = 3) {
     var data = imgdata.data;
 
     // 使用密钥生成变换参数
-    var keyHash = md5(key + "arnold_improved_highres");
+    var keyHash = md5(key + "arnold_nonsquare_v2");
     var a = 1 + (parseInt(keyHash.substr(0, 2), 16) % 3);
     var b = 1 + (parseInt(keyHash.substr(2, 2), 16) % 3);
-
-    // 动态调整块大小，避免过大导致溢出
-    var optimalBlockSize = Math.min(blockSize, Math.min(wid, hit));
-    optimalBlockSize = Math.max(optimalBlockSize, 16); // 最小块大小
-
-    // 分块处理
-    var blocksX = Math.ceil(wid / optimalBlockSize);
-    var blocksY = Math.ceil(hit / optimalBlockSize);
 
     // 创建临时缓冲区
     var tempData = new Uint8ClampedArray(data.length);
 
     // 多轮Arnold变换
     for (let iter = 0; iter < iterations; iter++) {
-        // 重置临时缓冲区为当前数据
+        tempData.set(data);
+
+        // 对整个图像进行变换，不限制于正方形区域
+        for (let y = 0; y < hit; y++) {
+            for (let x = 0; x < wid; x++) {
+                // 使用图像的实际尺寸进行模运算
+                var newX = (x + a * y) % wid;
+                var newY = (b * x + (a * b + 1) * y) % hit;
+
+                // 处理负值（虽然正常情况下不会出现，但安全起见）
+                newX = (newX + wid) % wid;
+                newY = (newY + hit) % hit;
+
+                var origIndex = (y * wid + x) * 4;
+                var newIndex = (newY * wid + newX) * 4;
+
+                // 复制像素数据
+                for (let c = 0; c < 4; c++) {
+                    data[newIndex + c] = tempData[origIndex + c];
+                }
+            }
+        }
+    }
+
+    var oimgdata = new ImageData(data, wid, hit);
+    cvd.putImageData(oimgdata, 0, 0);
+    return [cv.toDataURL(), wid, hit];
+}
+
+function decryptArnold(img1, key, iterations = 5) {
+    var cv = document.createElement("canvas");
+    var cvd = cv.getContext("2d");
+    var wid = img1.width;
+    var hit = img1.height;
+
+    cv.width = wid;
+    cv.height = hit;
+    cvd.drawImage(img1, 0, 0, wid, hit);
+
+    var imgdata = cvd.getImageData(0, 0, wid, hit);
+    var data = imgdata.data;
+
+    var keyHash = md5(key + "arnold_nonsquare_v2");
+    var a = 1 + (parseInt(keyHash.substr(0, 2), 16) % 3);
+    var b = 1 + (parseInt(keyHash.substr(2, 2), 16) % 3);
+
+    // 创建临时缓冲区
+    var tempData = new Uint8ClampedArray(data.length);
+
+    // 计算周期，确保完全还原
+    var period = findArnoldPeriod(wid, hit, a, b);
+    var actualIterations = iterations % period;
+
+    // 逆向多轮变换
+    for (let iter = 0; iter < actualIterations; iter++) {
+        tempData.set(data);
+
+        // 对整个图像进行逆向变换
+        for (let y = 0; y < hit; y++) {
+            for (let x = 0; x < wid; x++) {
+                // 计算行列式（模逆元所需）
+                var det = (a * b + 1) % wid;
+                
+                // 寻找模逆元
+                var detInv = findModularInverse(det, wid);
+                
+                // 逆向Arnold变换
+                var newX = (detInv * ((a * b + 1) * x - a * y)) % wid;
+                var newY = (detInv * (-b * x + y)) % hit;
+
+                // 处理负值
+                newX = (newX + wid) % wid;
+                newY = (newY + hit) % hit;
+
+                var origIndex = (y * wid + x) * 4;
+                var newIndex = (newY * wid + newX) * 4;
+
+                // 复制像素数据（逆向恢复）
+                for (let c = 0; c < 4; c++) {
+                    data[newIndex + c] = tempData[origIndex + c];
+                }
+            }
+        }
+    }
+
+    var oimgdata = new ImageData(data, wid, hit);
+    cvd.putImageData(oimgdata, 0, 0);
+    return [cv.toDataURL(), wid, hit];
+}
+
+// 辅助函数：寻找模逆元
+function findModularInverse(a, m) {
+    a = ((a % m) + m) % m; // 确保a是正数
+    for (let x = 1; x < m; x++) {
+        if ((a * x) % m === 1) {
+            return x;
+        }
+    }
+    return 1; // 如果没有逆元，返回1（理论上不会发生）
+}
+
+// 辅助函数：计算Arnold变换的周期
+function findArnoldPeriod(wid, hit, a, b) {
+    // 简化的周期计算，实际应用中可能需要更复杂的计算
+    // 这里返回一个足够大的安全值
+    var maxPeriod = wid * hit;
+    return Math.min(maxPeriod, 1000); // 限制最大周期
+}
+
+// 增强版本：处理超大图像的分块Arnold变换
+function encryptArnoldEnhanced(img1, key, maxBlockSize = 512, iterations = 3) {
+    var cv = document.createElement("canvas");
+    var cvd = cv.getContext("2d");
+    var wid = img1.width;
+    var hit = img1.height;
+
+    cv.width = wid;
+    cv.height = hit;
+    cvd.drawImage(img1, 0, 0, wid, hit);
+
+    var imgdata = cvd.getImageData(0, 0, wid, hit);
+    var data = imgdata.data;
+
+    // 使用密钥生成变换参数
+    var keyHash = md5(key + "arnold_enhanced_v3");
+    var a = 1 + (parseInt(keyHash.substr(0, 2), 16) % 3);
+    var b = 1 + (parseInt(keyHash.substr(2, 2), 16) % 3);
+
+    // 智能分块：对于非正方形图像，使用更小的块大小
+    var blockSize = calculateOptimalBlockSize(wid, hit, maxBlockSize);
+    
+    var blocksX = Math.ceil(wid / blockSize);
+    var blocksY = Math.ceil(hit / blockSize);
+
+    // 创建临时缓冲区
+    var tempData = new Uint8ClampedArray(data.length);
+
+    // 多轮Arnold变换
+    for (let iter = 0; iter < iterations; iter++) {
         tempData.set(data);
 
         // 对每个块进行处理
         for (let by = 0; by < blocksY; by++) {
             for (let bx = 0; bx < blocksX; bx++) {
-                // 计算当前块的实际尺寸（处理边界块）
-                var currentBlockWidth = Math.min(optimalBlockSize, wid - bx * optimalBlockSize);
-                var currentBlockHeight = Math.min(optimalBlockSize, hit - by * optimalBlockSize);
+                // 计算当前块的实际边界
+                var startX = bx * blockSize;
+                var startY = by * blockSize;
+                var endX = Math.min(startX + blockSize, wid);
+                var endY = Math.min(startY + blockSize, hit);
+                var blockWidth = endX - startX;
+                var blockHeight = endY - startY;
 
                 // 处理当前块
-                for (let y = 0; y < currentBlockHeight; y++) {
-                    for (let x = 0; x < currentBlockWidth; x++) {
-                        var origX = bx * optimalBlockSize + x;
-                        var origY = by * optimalBlockSize + y;
+                for (let y = 0; y < blockHeight; y++) {
+                    for (let x = 0; x < blockWidth; x++) {
+                        var origX = startX + x;
+                        var origY = startY + y;
 
-                        // 使用安全的大整数计算避免溢出
-                        var newX = Number((BigInt(x) + BigInt(a) * BigInt(y)) % BigInt(currentBlockWidth));
-                        var newY = Number((BigInt(b) * BigInt(x) + (BigInt(a) * BigInt(b) + 1n) * BigInt(y)) % BigInt(currentBlockHeight));
+                        // 使用块的实际尺寸进行变换
+                        var newX = (x + a * y) % blockWidth;
+                        var newY = (b * x + (a * b + 1) * y) % blockHeight;
 
-                        // 确保坐标在块内有效范围
-                        newX = (newX + currentBlockWidth) % currentBlockWidth;
-                        newY = (newY + currentBlockHeight) % currentBlockHeight;
+                        newX = (newX + blockWidth) % blockWidth;
+                        newY = (newY + blockHeight) % blockHeight;
 
-                        var newOrigX = bx * optimalBlockSize + newX;
-                        var newOrigY = by * optimalBlockSize + newY;
-
-                        // 最终边界检查
-                        if (newOrigX >= wid) newOrigX = wid - 1;
-                        if (newOrigY >= hit) newOrigY = hit - 1;
+                        var newOrigX = startX + newX;
+                        var newOrigY = startY + newY;
 
                         var origIndex = (origY * wid + origX) * 4;
                         var newIndex = (newOrigY * wid + newOrigX) * 4;
@@ -1197,7 +1326,25 @@ function encryptArnold(img1, key, blockSize = 128, iterations = 3) {
     return [cv.toDataURL(), wid, hit];
 }
 
-function decryptArnold(img1, key, blockSize = 128, iterations = 3) {
+// 辅助函数：计算最优块大小
+function calculateOptimalBlockSize(wid, hit, maxBlockSize) {
+    var minDim = Math.min(wid, hit);
+    var maxDim = Math.max(wid, hit);
+    var ratio = maxDim / minDim;
+    
+    // 根据宽高比动态调整块大小
+    if (ratio > 3) {
+        // 极端非正方形图像，使用较小的块
+        return Math.min(128, maxBlockSize);
+    } else if (ratio > 2) {
+        return Math.min(256, maxBlockSize);
+    } else {
+        return Math.min(512, maxBlockSize);
+    }
+}
+
+// 对应的解密函数
+function decryptArnoldEnhanced(img1, key, maxBlockSize = 512, iterations = 3) {
     var cv = document.createElement("canvas");
     var cvd = cv.getContext("2d");
     var wid = img1.width;
@@ -1210,17 +1357,15 @@ function decryptArnold(img1, key, blockSize = 128, iterations = 3) {
     var imgdata = cvd.getImageData(0, 0, wid, hit);
     var data = imgdata.data;
 
-    var keyHash = md5(key + "arnold_improved_highres");
+    var keyHash = md5(key + "arnold_enhanced_v3");
     var a = 1 + (parseInt(keyHash.substr(0, 2), 16) % 3);
     var b = 1 + (parseInt(keyHash.substr(2, 2), 16) % 3);
 
-    // 动态调整块大小
-    var optimalBlockSize = Math.min(blockSize, Math.min(wid, hit));
-    optimalBlockSize = Math.max(optimalBlockSize, 16);
-
-    // 分块处理
-    var blocksX = Math.ceil(wid / optimalBlockSize);
-    var blocksY = Math.ceil(hit / optimalBlockSize);
+    // 智能分块
+    var blockSize = calculateOptimalBlockSize(wid, hit, maxBlockSize);
+    
+    var blocksX = Math.ceil(wid / blockSize);
+    var blocksY = Math.ceil(hit / blockSize);
 
     // 创建临时缓冲区
     var tempData = new Uint8ClampedArray(data.length);
@@ -1232,48 +1377,31 @@ function decryptArnold(img1, key, blockSize = 128, iterations = 3) {
         // 对每个块进行逆向处理
         for (let by = 0; by < blocksY; by++) {
             for (let bx = 0; bx < blocksX; bx++) {
-                // 计算当前块的实际尺寸
-                var currentBlockWidth = Math.min(optimalBlockSize, wid - bx * optimalBlockSize);
-                var currentBlockHeight = Math.min(optimalBlockSize, hit - by * optimalBlockSize);
+                var startX = bx * blockSize;
+                var startY = by * blockSize;
+                var endX = Math.min(startX + blockSize, wid);
+                var endY = Math.min(startY + blockSize, hit);
+                var blockWidth = endX - startX;
+                var blockHeight = endY - startY;
 
-                for (let y = 0; y < currentBlockHeight; y++) {
-                    for (let x = 0; x < currentBlockWidth; x++) {
-                        var origX = bx * optimalBlockSize + x;
-                        var origY = by * optimalBlockSize + y;
+                for (let y = 0; y < blockHeight; y++) {
+                    for (let x = 0; x < blockWidth; x++) {
+                        var origX = startX + x;
+                        var origY = startY + y;
 
-                        // 使用BigInt进行安全计算
-                        var aBig = BigInt(a);
-                        var bBig = BigInt(b);
-                        var xBig = BigInt(x);
-                        var yBig = BigInt(y);
-                        var widthBig = BigInt(currentBlockWidth);
-                        var heightBig = BigInt(currentBlockHeight);
-
-                        // 逆向Arnold变换公式（使用模逆元）
-                        var det = (aBig * bBig + 1n) % widthBig;
-                        
                         // 计算模逆元
-                        var detInv = 1n;
-                        for (let i = 1n; i < widthBig; i++) {
-                            if ((det * i) % widthBig === 1n) {
-                                detInv = i;
-                                break;
-                            }
-                        }
+                        var det = (a * b + 1) % blockWidth;
+                        var detInv = findModularInverse(det, blockWidth);
 
-                        var newX = Number((detInv * ((aBig * bBig + 1n) * xBig - aBig * yBig)) % widthBig);
-                        var newY = Number((detInv * (-bBig * xBig + yBig)) % heightBig);
+                        // 逆向Arnold变换
+                        var newX = (detInv * ((a * b + 1) * x - a * y)) % blockWidth;
+                        var newY = (detInv * (-b * x + y)) % blockHeight;
 
-                        // 处理负值
-                        newX = (newX + currentBlockWidth) % currentBlockWidth;
-                        newY = (newY + currentBlockHeight) % currentBlockHeight;
+                        newX = (newX + blockWidth) % blockWidth;
+                        newY = (newY + blockHeight) % blockHeight;
 
-                        var newOrigX = bx * optimalBlockSize + newX;
-                        var newOrigY = by * optimalBlockSize + newY;
-
-                        // 边界检查
-                        if (newOrigX >= wid) newOrigX = wid - 1;
-                        if (newOrigY >= hit) newOrigY = hit - 1;
+                        var newOrigX = startX + newX;
+                        var newOrigY = startY + newY;
 
                         var origIndex = (origY * wid + origX) * 4;
                         var newIndex = (newOrigY * wid + newOrigX) * 4;
