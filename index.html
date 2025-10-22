@@ -370,6 +370,47 @@
             color: #0c5460;
             display: block;
         }
+        
+        /* 新增样式：预览区域 */
+        .preview-area {
+            margin: 15px 0;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            max-height: 300px;
+            overflow: auto;
+        }
+        
+        .preview-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #6a5af9;
+        }
+        
+        .preview-content {
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 200px;
+            overflow: auto;
+        }
+        
+        .preview-image {
+            max-width: 100%;
+            max-height: 200px;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        .preview-unsupported {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -508,6 +549,15 @@
                             <div class="file-size" id="extracted-size">15 KB</div>
                         </div>
                     </div>
+                    
+                    <!-- 新增：预览区域 -->
+                    <div class="preview-area">
+                        <div class="preview-title">文件预览</div>
+                        <div class="preview-content" id="preview-content">
+                            <!-- 预览内容将在这里显示 -->
+                        </div>
+                    </div>
+                    
                     <div class="result-actions">
                         <button class="result-btn primary" id="download-btn">下载文件</button>
                     </div>
@@ -546,6 +596,7 @@
         const algorithmOptions = document.querySelectorAll('.algorithm-option');
         const packStatus = document.getElementById('pack-status');
         const extractStatus = document.getElementById('extract-status');
+        const previewContent = document.getElementById('preview-content');
         
         // 全局变量
         let selectedAlgorithm = 'dynamic';
@@ -776,6 +827,10 @@
                 // 显示提取结果
                 document.getElementById('extracted-name').textContent = extracted.name;
                 document.getElementById('extracted-size').textContent = formatFileSize(blob.size);
+                
+                // 显示文件预览
+                displayFilePreview(extractedFile);
+                
                 extractResult.classList.remove('hidden');
                 
                 showStatus(extractStatus, `成功提取文件: ${extracted.name}`, 'success');
@@ -790,6 +845,43 @@
                 extractBtn.disabled = false;
             }
         });
+        
+        // 
+        // 显示文件预览
+        function displayFilePreview(fileInfo) {
+            const blob = fileInfo.blob;
+            const type = fileInfo.type;
+            const name = fileInfo.name;
+            
+            // 清空预览区域
+            previewContent.innerHTML = '';
+            
+            // 根据文件类型显示不同预览
+            if (type.startsWith('text/')) {
+                // 文本文件预览
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const text = e.target.result;
+                    // 限制预览长度
+                    const previewText = text.length > 1000 ? text.substring(0, 1000) + '...' : text;
+                    previewContent.innerHTML = `<pre>${previewText}</pre>`;
+                };
+                reader.readAsText(blob);
+            } else if (type.startsWith('image/')) {
+                // 图片文件预览
+                const url = URL.createObjectURL(blob);
+                const img = document.createElement('img');
+                img.src = url;
+                img.className = 'preview-image';
+                img.onload = function() {
+                    URL.revokeObjectURL(url);
+                };
+                previewContent.appendChild(img);
+            } else {
+                // 不支持预览的文件类型
+                previewContent.innerHTML = '<div class="preview-unsupported">该文件类型不支持预览</div>';
+            }
+        }
         
         // 保存图片按钮
         document.getElementById('save-btn').addEventListener('click', () => {
@@ -832,8 +924,6 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
         
-        // 加载图片
-       
         // 加载图片
         function loadImage(file) {
             return new Promise((resolve, reject) => {
