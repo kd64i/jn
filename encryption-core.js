@@ -76,7 +76,7 @@ function jiemi() {
                 } else if (a == "arnold") {
                     s = decryptArnold(IMG, k);
                 } else if (a == "Hilbert") {
-                    s = decrypHilbert(IMG, k);
+                    s = decryptHilbert(IMG, k);
                 } else {
                     s = decryptC2(IMG, k);
                 }
