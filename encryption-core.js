@@ -1,16 +1,21 @@
 function jiami() {
+
     if (SRC == "") {
         alert(INFO1)
     } else {
+
         let t = Date.now();
         let s = "";
         let a = document.getElementById("slct").value;
         let k = document.getElementById("ikey").value;
         let k2 = parseFloat(document.getElementById("ikey2").value);
+
         document.getElementById("imgwrap").style.display = "none";
         document.getElementById("loading").style.display = "block";
+
         requestAnimationFrame(function() {
             requestAnimationFrame(function() {
+
                 if (a == "b") {
                     s = encryptB2(IMG, k, 32, 32);
                 } else if (a == "c") {
@@ -29,18 +34,24 @@ function jiami() {
                     s = encryptDiffusion(IMG, k);
                 } else if (a == "arnold") {
                     s = encryptArnold(IMG, k);
-                } else if (a == "Hilbert") {
-                    s = encryptHilbert(IMG, k);
                 } else {
                     s = encryptC2(IMG, k);
                 }
+
+
+
+
+
+
                 setpic(s[0]);
                 document.getElementById("picinfo").innerHTML = "size:&ensp;" + s[1] + "×" + s[2] + "&emsp;time:&ensp;" + (Date.now() - t).toString() + "ms"
                 document.getElementById("imgwrap").style.display = "block";
                 document.getElementById("loading").style.display = "none";
             })
         })
+
     }
+
 }
 
 function jiemi() {
@@ -48,15 +59,19 @@ function jiemi() {
     if (SRC == "") {
         alert(INFO1)
     } else {
+
         let t = Date.now();
         let s = "";
         let a = document.getElementById("slct").value;
         let k = document.getElementById("ikey").value;
         let k2 = parseFloat(document.getElementById("ikey2").value);
+
         document.getElementById("imgwrap").style.display = "none";
         document.getElementById("loading").style.display = "block";
+
         requestAnimationFrame(function() {
             requestAnimationFrame(function() {
+
                 if (a == "b") {
                     s = decryptB2(IMG, k, 32, 32);
                 } else if (a == "c") {
@@ -75,11 +90,13 @@ function jiemi() {
                     s = decryptDiffusion(IMG, k);
                 } else if (a == "arnold") {
                     s = decryptArnold(IMG, k);
-                } else if (a == "Hilbert") {
-                    s = decryptHilbert(IMG, k);
                 } else {
                     s = decryptC2(IMG, k);
                 }
+
+
+
+
                 setpic(s[0]);
                 document.getElementById("kimg").src = SRC;
                 document.getElementById("picinfo").innerHTML = "size:&ensp;" + s[1] + "×" + s[2] + "&emsp;time:&ensp;" + (Date.now() - t).toString() + "ms"
@@ -87,8 +104,13 @@ function jiemi() {
                 document.getElementById("loading").style.display = "none";
             })
         })
+
     }
+
 }
+
+
+
 
 //随机打乱
 function amess(arrlength, ast) {
@@ -102,7 +124,10 @@ function amess(arrlength, ast) {
     }
     return arr;
 }
+
+
 //picencrypt算法
+
 function produceLogisticSort(a, b) {
     return a[0] - b[0]
 }
