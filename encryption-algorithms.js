@@ -1,3 +1,77 @@
+// Hilbert曲线像素混淆算法
+function encryptHilbert(img1, key) {
+    var cv = document.createElement("canvas");
+    var cvd = cv.getContext("2d");
+    var wid = img1.width;
+    var hit = img1.height;
+    var imgdata;
+    var oimgdata;
+
+    // 缩放大小
+    if (wid * hit > SIZE) {
+        wid = parseInt(Math.pow(SIZE * img1.width / img1.height, 1 / 2));
+        hit = parseInt(Math.pow(SIZE * img1.height / img1.width, 1 / 2));
+    }
+
+    cv.width = wid;
+    cv.height = hit;
+    cvd.drawImage(img1, 0, 0, wid, hit);
+
+    imgdata = cvd.getImageData(0, 0, wid, hit);
+    oimgdata = cvd.createImageData(wid, hit);
+
+    var curve = gilbert2d(wid, hit);
+    var offset = Math.round((Math.sqrt(5) - 1) / 2 * wid * hit);
+
+    for (let i = 0; i < wid * hit; i++) {
+        var old_pos = curve[i];
+        var new_pos = curve[(i + offset) % (wid * hit)];
+        var old_p = 4 * (old_pos[0] + old_pos[1] * wid);
+        var new_p = 4 * (new_pos[0] + new_pos[1] * wid);
+
+        oimgdata.data[new_p] = imgdata.data[old_p];
+        oimgdata.data[new_p + 1] = imgdata.data[old_p + 1];
+        oimgdata.data[new_p + 2] = imgdata.data[old_p + 2];
+        oimgdata.data[new_p + 3] = imgdata.data[old_p + 3];
+    }
+
+    cvd.putImageData(oimgdata, 0, 0);
+    return [cv.toDataURL(), wid, hit];
+}
+
+function decryptHilbert(img1, key) {
+    var cv = document.createElement("canvas");
+    var cvd = cv.getContext("2d");
+    var wid = img1.width;
+    var hit = img1.height;
+    var imgdata;
+    var oimgdata;
+
+    cv.width = wid;
+    cv.height = hit;
+    cvd.drawImage(img1, 0, 0, wid, hit);
+
+    imgdata = cvd.getImageData(0, 0, wid, hit);
+    oimgdata = cvd.createImageData(wid, hit);
+
+    var curve = gilbert2d(wid, hit);
+    var offset = Math.round((Math.sqrt(5) - 1) / 2 * wid * hit);
+
+    for (let i = 0; i < wid * hit; i++) {
+        var old_pos = curve[i];
+        var new_pos = curve[(i + offset) % (wid * hit)];
+        var old_p = 4 * (old_pos[0] + old_pos[1] * wid);
+        var new_p = 4 * (new_pos[0] + new_pos[1] * wid);
+
+        oimgdata.data[old_p] = imgdata.data[new_p];
+        oimgdata.data[old_p + 1] = imgdata.data[new_p + 1];
+        oimgdata.data[old_p + 2] = imgdata.data[new_p + 2];
+        oimgdata.data[old_p + 3] = imgdata.data[new_p + 3];
+    }
+
+    cvd.putImageData(oimgdata, 0, 0);
+    return [cv.toDataURL(), wid, hit];
+}
 //块混淆
 function encryptB2(img1, key, sx, sy) {
     var cv = document.createElement("canvas");
@@ -584,6 +658,7 @@ function encryptRotate(img1, key, blockSize = 32) {
                     // 如果超出实际图像范围，跳过
                     if (origX >= wid || origY >= hit) continue;
                     var newX, newY;
+
                     // 根据旋转角度计算新坐标
                     switch (rotation) {
                         case 0: // 0° - 不旋转
@@ -1094,6 +1169,7 @@ function decryptDiffusion(img1, key, blockSize = 16, iterations = 2) {
     resultCanvas.width = wid;
     resultCanvas.height = hit;
     resultCtx.drawImage(cv, 0, 0, wid, hit);
+
     return [resultCanvas.toDataURL(), wid, hit];
 }
 
@@ -1162,6 +1238,7 @@ function encryptArnold(img1, key, blockSize = 64, iterations = 3) {
         // 更新数据为当前轮次处理结果
         data.set(tempData);
     }
+
     var oimgdata = new ImageData(data, wid, hit);
     cvd.putImageData(oimgdata, 0, 0);
     return [cv.toDataURL(), wid, hit];
@@ -1235,80 +1312,6 @@ function decryptArnold(img1, key, blockSize = 64, iterations = 3) {
     }
 
     var oimgdata = new ImageData(data, wid, hit);
-    cvd.putImageData(oimgdata, 0, 0);
-    return [cv.toDataURL(), wid, hit];
-}
-// Hilbert曲线像素混淆算法
-function encryptHilbert(img1, key) {
-    var cv = document.createElement("canvas");
-    var cvd = cv.getContext("2d");
-    var wid = img1.width;
-    var hit = img1.height;
-    var imgdata;
-    var oimgdata;
-
-    // 缩放大小
-    if (wid * hit > SIZE) {
-        wid = parseInt(Math.pow(SIZE * img1.width / img1.height, 1 / 2));
-        hit = parseInt(Math.pow(SIZE * img1.height / img1.width, 1 / 2));
-    }
-
-    cv.width = wid;
-    cv.height = hit;
-    cvd.drawImage(img1, 0, 0, wid, hit);
-
-    imgdata = cvd.getImageData(0, 0, wid, hit);
-    oimgdata = cvd.createImageData(wid, hit);
-
-    var curve = gilbert2d(wid, hit);
-    var offset = Math.round((Math.sqrt(5) - 1) / 2 * wid * hit);
-
-    for (let i = 0; i < wid * hit; i++) {
-        var old_pos = curve[i];
-        var new_pos = curve[(i + offset) % (wid * hit)];
-        var old_p = 4 * (old_pos[0] + old_pos[1] * wid);
-        var new_p = 4 * (new_pos[0] + new_pos[1] * wid);
-
-        oimgdata.data[new_p] = imgdata.data[old_p];
-        oimgdata.data[new_p + 1] = imgdata.data[old_p + 1];
-        oimgdata.data[new_p + 2] = imgdata.data[old_p + 2];
-        oimgdata.data[new_p + 3] = imgdata.data[old_p + 3];
-    }
-
-    cvd.putImageData(oimgdata, 0, 0);
-    return [cv.toDataURL(), wid, hit];
-}
-
-function decryptHilbert(img1, key) {
-    var cv = document.createElement("canvas");
-    var cvd = cv.getContext("2d");
-    var wid = img1.width;
-    var hit = img1.height;
-    var imgdata;
-    var oimgdata;
-
-    cv.width = wid;
-    cv.height = hit;
-    cvd.drawImage(img1, 0, 0, wid, hit);
-
-    imgdata = cvd.getImageData(0, 0, wid, hit);
-    oimgdata = cvd.createImageData(wid, hit);
-
-    var curve = gilbert2d(wid, hit);
-    var offset = Math.round((Math.sqrt(5) - 1) / 2 * wid * hit);
-
-    for (let i = 0; i < wid * hit; i++) {
-        var old_pos = curve[i];
-        var new_pos = curve[(i + offset) % (wid * hit)];
-        var old_p = 4 * (old_pos[0] + old_pos[1] * wid);
-        var new_p = 4 * (new_pos[0] + new_pos[1] * wid);
-
-        oimgdata.data[old_p] = imgdata.data[new_p];
-        oimgdata.data[old_p + 1] = imgdata.data[new_p + 1];
-        oimgdata.data[old_p + 2] = imgdata.data[new_p + 2];
-        oimgdata.data[old_p + 3] = imgdata.data[new_p + 3];
-    }
-
     cvd.putImageData(oimgdata, 0, 0);
     return [cv.toDataURL(), wid, hit];
 }
