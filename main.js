@@ -342,6 +342,8 @@ let SRC = "";
 let OPICSRC = "";
 let INFO1 = "请先上传图片！";
 let INFO2 = "本页面仅供技术研究使用，请勿用于非法用途，否则后果作者概不负责";
+let INFO3 = "图片过大可能解密不了，多个复杂混淆一起用也可能导致解不了，如果有其他问题，请清除软件缓存后重新打开";
+
 
 function selectonchange() {
     if (["pe1", "pe2"].indexOf(document.getElementById("slct").value) == -1) {
@@ -826,7 +828,6 @@ function decryptC(img1, key) {
 }
 
 
-
 //行像素混淆
 function encryptC2(img1, key) {
     var cv = document.createElement("canvas");
@@ -911,9 +912,6 @@ function decryptC2(img1, key) {
     cvd.putImageData(oimgdata, 0, 0);
     return [cv.toDataURL(), wid, hit]
 }
-
-
-
 
 //picencrypt算法
 
@@ -1130,10 +1128,6 @@ function decryptPE2(img1, key) {
             o2imgdata.data[4 * (m + j * wid) + 3] = oimgdata.data[4 * (i + j * wid) + 3];
         }
     }
-
-
-
-
 
     cvd.putImageData(o2imgdata, 0, 0);
     return [cv.toDataURL(), wid, hit]
