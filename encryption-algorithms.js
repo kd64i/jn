@@ -1,10 +1,13 @@
 // Hilbert曲线像素混淆算法
+// Hilbert曲线像素混淆算法
 function encryptHilbert(img1, key) {
     var cv = document.createElement("canvas");
     var cvd = cv.getContext("2d");
     var wid = img1.width;
     var hit = img1.height;
-
+    var imgdata;
+    var oimgdata;
+    
     // 缩放大小
     if (wid * hit > SIZE) {
         wid = parseInt(Math.pow(SIZE * img1.width / img1.height, 1 / 2));
@@ -15,31 +18,18 @@ function encryptHilbert(img1, key) {
     cv.height = hit;
     cvd.drawImage(img1, 0, 0, wid, hit);
 
-    var imgdata = cvd.getImageData(0, 0, wid, hit);
-    var oimgdata = cvd.createImageData(wid, hit);
+    imgdata = cvd.getImageData(0, 0, wid, hit);
+    oimgdata = cvd.createImageData(wid, hit);
 
-    // 使用密钥生成确定性偏移量
-    var keyHash = md5(key + "hilbert_offset");
-    var seed = 0;
-    for (let i = 0; i < 8; i++) {
-        seed = (seed * 256 + keyHash.charCodeAt(i)) % 2147483647;
-    }
-    
-    // 黄金比例为基础的偏移量，使用密钥进行调制
-    var goldenRatio = (Math.sqrt(5) - 1) / 2;
-    var offset = Math.round((goldenRatio + seed / 2147483647) * wid * hit) % (wid * hit);
-
-    // 生成Hilbert曲线序列
-    var curve = generateHilbertCurve(wid, hit);
+    var curve = gilbert2d(wid, hit);
+    var offset = Math.round((Math.sqrt(5) - 1) / 2 * wid * hit);
 
     for (let i = 0; i < wid * hit; i++) {
         var old_pos = curve[i];
         var new_pos = curve[(i + offset) % (wid * hit)];
-        
         var old_p = 4 * (old_pos[0] + old_pos[1] * wid);
         var new_p = 4 * (new_pos[0] + new_pos[1] * wid);
 
-        // 复制RGBA四个通道
         oimgdata.data[new_p] = imgdata.data[old_p];
         oimgdata.data[new_p + 1] = imgdata.data[old_p + 1];
         oimgdata.data[new_p + 2] = imgdata.data[old_p + 2];
@@ -55,35 +45,25 @@ function decryptHilbert(img1, key) {
     var cvd = cv.getContext("2d");
     var wid = img1.width;
     var hit = img1.height;
+    var imgdata;
+    var oimgdata;
 
     cv.width = wid;
     cv.height = hit;
     cvd.drawImage(img1, 0, 0, wid, hit);
 
-    var imgdata = cvd.getImageData(0, 0, wid, hit);
-    var oimgdata = cvd.createImageData(wid, hit);
+    imgdata = cvd.getImageData(0, 0, wid, hit);
+    oimgdata = cvd.createImageData(wid, hit);
 
-    // 使用相同的密钥生成相同的偏移量
-    var keyHash = md5(key + "hilbert_offset");
-    var seed = 0;
-    for (let i = 0; i < 8; i++) {
-        seed = (seed * 256 + keyHash.charCodeAt(i)) % 2147483647;
-    }
-    
-    var goldenRatio = (Math.sqrt(5) - 1) / 2;
-    var offset = Math.round((goldenRatio + seed / 2147483647) * wid * hit) % (wid * hit);
-
-    // 生成相同的Hilbert曲线序列
-    var curve = generateHilbertCurve(wid, hit);
+    var curve = gilbert2d(wid, hit);
+    var offset = Math.round((Math.sqrt(5) - 1) / 2 * wid * hit);
 
     for (let i = 0; i < wid * hit; i++) {
         var old_pos = curve[i];
         var new_pos = curve[(i + offset) % (wid * hit)];
-        
         var old_p = 4 * (old_pos[0] + old_pos[1] * wid);
         var new_p = 4 * (new_pos[0] + new_pos[1] * wid);
 
-        // 逆向操作：从新位置恢复到原始位置
         oimgdata.data[old_p] = imgdata.data[new_p];
         oimgdata.data[old_p + 1] = imgdata.data[new_p + 1];
         oimgdata.data[old_p + 2] = imgdata.data[new_p + 2];
@@ -94,50 +74,6 @@ function decryptHilbert(img1, key) {
     return [cv.toDataURL(), wid, hit];
 }
 
-// Hilbert曲线生成函数（需要实现）
-function generateHilbertCurve(width, height) {
-    var curve = [];
-    var n = Math.max(width, height);
-    var size = 1;
-    
-    // 找到最接近的2的幂次方
-    while (size < n) {
-        size *= 2;
-    }
-    
-    // 生成Hilbert曲线索引
-    function hilbert(x, y, ax, ay, bx, by) {
-        if (ax * ay === 0) return;
-        
-        var w = Math.abs(ax + ay);
-        var h = Math.abs(bx + by);
-        
-        if (2 * w > size && 2 * h > size) {
-            hilbert(x, y, ax/2, ay/2, bx/2, by/2);
-        }
-        
-        var dx = (ax < 0) ? -1 : (ax > 0) ? 1 : 0;
-        var dy = (ay < 0) ? -1 : (ay > 0) ? 1 : 0;
-        
-        for (var i = 0; i < w; i++) {
-            var px = x + i * dx;
-            var py = y + i * dy;
-            if (px >= 0 && px < width && py >= 0 && py < height) {
-                curve.push([px, py]);
-            }
-        }
-        
-        hilbert(x + w * dx, y + w * dy, bx, by, ax, ay);
-    }
-    
-    // 从四个角开始生成曲线
-    hilbert(0, 0, size, 0, 0, size);
-    hilbert(0, size-1, 0, -size, size, 0);
-    hilbert(size-1, size-1, -size, 0, 0, -size);
-    hilbert(size-1, 0, 0, size, -size, 0);
-    
-    return curve;
-}
 
 //块混淆
 function encryptB2(img1, key, sx, sy) {
