@@ -15,8 +15,11 @@ function jiami() {
 
         requestAnimationFrame(function() {
             requestAnimationFrame(function() {
-
-                if (a == "b") {
+            
+            if(a == "Hilbert"){
+            s = encryptHilbert(IMG, k);
+            
+            }else if (a == "b"){
                     s = encryptB2(IMG, k, 32, 32);
                 } else if (a == "c") {
                     s = encryptC(IMG, k);
@@ -71,8 +74,13 @@ function jiemi() {
 
         requestAnimationFrame(function() {
             requestAnimationFrame(function() {
+            
+            if(a == "Hilbert"){
+            
+            s = decryptHilbert(IMG, k);
+            }
 
-                if (a == "b") {
+               else if (a == "b") {
                     s = decryptB2(IMG, k, 32, 32);
                 } else if (a == "c") {
                     s = decryptC(IMG, k);
