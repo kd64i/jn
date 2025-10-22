@@ -1,5 +1,4 @@
 //块混淆
-
 function encryptB2(img1, key, sx, sy) {
     var cv = document.createElement("canvas");
     var cvd = cv.getContext("2d");
@@ -1123,7 +1122,6 @@ function decryptDiffusion(img1, key, blockSize = 16, iterations = 2) {
 }
 
 // 改进的Arnold变换加密算法
-// 改进的Arnold变换加密算法
 function encryptArnold(img1, key, blockSize = 64, iterations = 3) {
     var cv = document.createElement("canvas");
     var cvd = cv.getContext("2d");
@@ -1146,11 +1144,11 @@ function encryptArnold(img1, key, blockSize = 64, iterations = 3) {
     var blocksX = Math.ceil(wid / blockSize);
     var blocksY = Math.ceil(hit / blockSize);
 
-    // 创建临时缓冲区存储处理后的数据
-    var tempData = new Uint8ClampedArray(data.length);
-
     // 多轮Arnold变换
     for (let iter = 0; iter < iterations; iter++) {
+        // 创建临时缓冲区存储处理后的数据
+        var tempData = new Uint8ClampedArray(data.length);
+        
         // 对每个块进行处理
         for (let by = 0; by < blocksY; by++) {
             for (let bx = 0; bx < blocksX; bx++) {
@@ -1176,7 +1174,7 @@ function encryptArnold(img1, key, blockSize = 64, iterations = 3) {
                         var origIndex = (origY * wid + origX) * 4;
                         var newIndex = (newOrigY * wid + newOrigX) * 4;
 
-                        // 复制像素数据到临时缓冲区
+                        // 复制像素数据到临时缓冲区（从原位置到新位置）
                         for (let c = 0; c < 4; c++) {
                             tempData[newIndex + c] = data[origIndex + c];
                         }
@@ -1193,7 +1191,7 @@ function encryptArnold(img1, key, blockSize = 64, iterations = 3) {
     return [cv.toDataURL(), wid, hit];
 }
 
-// 改进的Arnold变换解密算法
+// 修复后的Arnold变换解密算法
 function decryptArnold(img1, key, blockSize = 64, iterations = 3) {
     var cv = document.createElement("canvas");
     var cvd = cv.getContext("2d");
@@ -1215,11 +1213,11 @@ function decryptArnold(img1, key, blockSize = 64, iterations = 3) {
     var blocksX = Math.ceil(wid / blockSize);
     var blocksY = Math.ceil(hit / blockSize);
 
-    // 创建临时缓冲区存储处理后的数据
-    var tempData = new Uint8ClampedArray(data.length);
-
     // 逆向多轮变换
     for (let iter = 0; iter < iterations; iter++) {
+        // 创建临时缓冲区存储处理后的数据
+        var tempData = new Uint8ClampedArray(data.length);
+        
         // 对每个块进行逆向处理
         for (let by = 0; by < blocksY; by++) {
             for (let bx = 0; bx < blocksX; bx++) {
@@ -1248,9 +1246,9 @@ function decryptArnold(img1, key, blockSize = 64, iterations = 3) {
                         var origIndex = (origY * wid + origX) * 4;
                         var newIndex = (newOrigY * wid + newOrigX) * 4;
 
-                        // 复制像素数据到临时缓冲区（逆向恢复）
+                        // 修复：从新位置复制像素数据到原位置（逆向恢复）
                         for (let c = 0; c < 4; c++) {
-                            tempData[newIndex + c] = data[origIndex + c];
+                            tempData[origIndex + c] = data[newIndex + c];
                         }
                     }
                 }
